@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, Address, Env, Symbol, Vec};
+use soroban_sdk::{contracttype, symbol_short, Address, Env, Symbol, Vec};
 
 use crate::errors::InsightArenaError;
 use crate::storage_types::DataKey;
@@ -144,9 +144,6 @@ pub fn set_paused(env: &Env, paused: bool) -> Result<(), InsightArenaError> {
     Ok(())
 }
 
-/// Atomically replace the admin address. Caller must be the current admin.
-///
-/// After this call the old admin address loses all privileges immediately.
 pub fn transfer_admin(env: &Env, new_admin: Address) -> Result<(), InsightArenaError> {
     let mut config = load_config(env)?;
 
@@ -158,6 +155,36 @@ pub fn transfer_admin(env: &Env, new_admin: Address) -> Result<(), InsightArenaE
     bump_config(env);
 
     Ok(())
+}
+
+/// Update the trusted oracle address. Caller must be the current admin.
+///
+/// After this call the old oracle address can no longer resolve markets.
+pub fn update_oracle(env: &Env, admin: Address, new_oracle: Address) -> Result<(), InsightArenaError> {
+    let mut config = load_config(env)?;
+
+    // Auth against the *current* admin.
+    admin.require_auth();
+
+    if admin != config.admin {
+        return Err(InsightArenaError::Unauthorized);
+    }
+
+    let old_oracle = config.oracle_address;
+    config.oracle_address = new_oracle.clone();
+    env.storage().persistent().set(&DataKey::Config, &config);
+    bump_config(env);
+
+    emit_oracle_updated(env, &old_oracle, &new_oracle);
+
+    Ok(())
+}
+
+fn emit_oracle_updated(env: &Env, old_oracle: &Address, new_oracle: &Address) {
+    env.events().publish(
+        (symbol_short!("cfg"), symbol_short!("ora_upd")),
+        (old_oracle.clone(), new_oracle.clone()),
+    );
 }
 
 /// Guard used at the top of every user-facing entry point.

@@ -202,4 +202,43 @@ mod resolve_tests {
         let result = client.try_resolve_market(&oracle, &id, &symbol_short!("maybe"));
         assert!(matches!(result, Err(Ok(InsightArenaError::InvalidOutcome))));
     }
+
+    #[test]
+    fn update_oracle_and_resolve() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, admin, old_oracle) = deploy(&env);
+        let creator = Address::generate(&env);
+        let new_oracle = Address::generate(&env);
+
+        let id = client.create_market(&creator, &default_params(&env));
+
+        // Update oracle
+        client.update_oracle(&admin, &new_oracle);
+
+        // Advance time
+        env.ledger().set_timestamp(env.ledger().timestamp() + 2000);
+
+        // Old oracle cannot resolve
+        let result = client.try_resolve_market(&old_oracle, &id, &symbol_short!("yes"));
+        assert!(matches!(result, Err(Ok(InsightArenaError::Unauthorized))));
+
+        // New oracle can resolve
+        client.resolve_market(&new_oracle, &id, &symbol_short!("yes"));
+
+        let market = client.get_market(&id);
+        assert!(market.is_resolved);
+    }
+
+    #[test]
+    fn update_oracle_unauthorized() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, _admin, _old_oracle) = deploy(&env);
+        let random = Address::generate(&env);
+        let new_oracle = Address::generate(&env);
+
+        let result = client.try_update_oracle(&random, &new_oracle);
+        assert!(matches!(result, Err(Ok(InsightArenaError::Unauthorized))));
+    }
 }
