@@ -506,7 +506,6 @@ pub fn claim_payout(
         escrow::release_payout(env, &predictor, net_payout)?;
     }
     if protocol_fee > 0 {
-        escrow::refund(env, &cfg.admin, protocol_fee)?;
         escrow::add_to_treasury_balance(env, protocol_fee);
     }
     if creator_fee > 0 {
@@ -650,7 +649,6 @@ pub fn batch_distribute_payouts(
             escrow::release_payout(env, &stored_prediction.predictor, net_payout)?;
         }
         if protocol_fee > 0 {
-            escrow::refund(env, &cfg.admin, protocol_fee)?;
             escrow::add_to_treasury_balance(env, protocol_fee);
         }
         if creator_fee > 0 {
