@@ -3,6 +3,7 @@
 pub mod config;
 pub mod errors;
 pub mod escrow;
+pub mod governance;
 pub mod invite;
 pub mod market;
 pub mod oracle;
@@ -14,6 +15,7 @@ pub mod storage_types;
 pub mod ttl;
 pub use crate::config::Config;
 pub use crate::errors::InsightArenaError;
+pub use crate::governance::{Proposal, ProposalType};
 pub use crate::market::CreateMarketParams;
 pub use crate::storage_types::{
     CreatorStats, DataKey, InviteCode, LeaderboardEntry, LeaderboardSnapshot, Market, Prediction,
@@ -269,6 +271,32 @@ impl InsightArenaContract {
         market_id: u64,
     ) -> Result<u32, InsightArenaError> {
         prediction::batch_distribute_payouts(&env, caller, market_id)
+    }
+
+    pub fn create_proposal(
+        env: Env,
+        proposer: Address,
+        proposal_type: ProposalType,
+        voting_duration: u64,
+    ) -> Result<u32, InsightArenaError> {
+        governance::create_proposal(&env, proposer, proposal_type, voting_duration)
+    }
+
+    pub fn vote(
+        env: Env,
+        voter: Address,
+        proposal_id: u32,
+        vote_for: bool,
+    ) -> Result<(), InsightArenaError> {
+        governance::vote(&env, voter, proposal_id, vote_for)
+    }
+
+    pub fn execute_proposal(
+        env: Env,
+        executor: Address,
+        proposal_id: u32,
+    ) -> Result<(), InsightArenaError> {
+        governance::execute_proposal(&env, executor, proposal_id)
     }
 
     /// Return the total protocol fees accumulated in the treasury.
