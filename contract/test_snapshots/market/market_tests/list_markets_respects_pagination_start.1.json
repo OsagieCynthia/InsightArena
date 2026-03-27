@@ -44,7 +44,7 @@
                         "symbol": "category"
                       },
                       "val": {
-                        "symbol": "weather"
+                        "symbol": "Sports"
                       }
                     },
                     {
@@ -160,7 +160,7 @@
                         "symbol": "category"
                       },
                       "val": {
-                        "symbol": "weather"
+                        "symbol": "Sports"
                       }
                     },
                     {
@@ -276,7 +276,7 @@
                         "symbol": "category"
                       },
                       "val": {
-                        "symbol": "weather"
+                        "symbol": "Sports"
                       }
                     },
                     {
@@ -392,7 +392,7 @@
                         "symbol": "category"
                       },
                       "val": {
-                        "symbol": "weather"
+                        "symbol": "Sports"
                       }
                     },
                     {
@@ -508,7 +508,7 @@
                         "symbol": "category"
                       },
                       "val": {
-                        "symbol": "weather"
+                        "symbol": "Sports"
                       }
                     },
                     {
@@ -685,6 +685,67 @@
             "key": {
               "vec": [
                 {
+                  "symbol": "CategoryIndex"
+                },
+                {
+                  "symbol": "Sports"
+                }
+              ]
+            },
+            "durability": "persistent"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+                "key": {
+                  "vec": [
+                    {
+                      "symbol": "CategoryIndex"
+                    },
+                    {
+                      "symbol": "Sports"
+                    }
+                  ]
+                },
+                "durability": "persistent",
+                "val": {
+                  "vec": [
+                    {
+                      "u64": 1
+                    },
+                    {
+                      "u64": 2
+                    },
+                    {
+                      "u64": 3
+                    },
+                    {
+                      "u64": 4
+                    },
+                    {
+                      "u64": 5
+                    }
+                  ]
+                }
+              }
+            },
+            "ext": "v0"
+          },
+          518400
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+            "key": {
+              "vec": [
+                {
                   "symbol": "Config"
                 }
               ]
@@ -819,7 +880,7 @@
                         "symbol": "category"
                       },
                       "val": {
-                        "symbol": "weather"
+                        "symbol": "Sports"
                       }
                     },
                     {
@@ -1031,7 +1092,7 @@
                         "symbol": "category"
                       },
                       "val": {
-                        "symbol": "weather"
+                        "symbol": "Sports"
                       }
                     },
                     {
@@ -1243,7 +1304,7 @@
                         "symbol": "category"
                       },
                       "val": {
-                        "symbol": "weather"
+                        "symbol": "Sports"
                       }
                     },
                     {
@@ -1455,7 +1516,7 @@
                         "symbol": "category"
                       },
                       "val": {
-                        "symbol": "weather"
+                        "symbol": "Sports"
                       }
                     },
                     {
@@ -1667,7 +1728,7 @@
                         "symbol": "category"
                       },
                       "val": {
-                        "symbol": "weather"
+                        "symbol": "Sports"
                       }
                     },
                     {
@@ -1898,14 +1959,46 @@
                     "executable": {
                       "wasm": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
                     },
-                    "storage": null
+                    "storage": [
+                      {
+                        "key": {
+                          "vec": [
+                            {
+                              "symbol": "Categories"
+                            }
+                          ]
+                        },
+                        "val": {
+                          "vec": [
+                            {
+                              "symbol": "Sports"
+                            },
+                            {
+                              "symbol": "Crypto"
+                            },
+                            {
+                              "symbol": "Politics"
+                            },
+                            {
+                              "symbol": "Entertainment"
+                            },
+                            {
+                              "symbol": "Science"
+                            },
+                            {
+                              "symbol": "Other"
+                            }
+                          ]
+                        }
+                      }
+                    ]
                   }
                 }
               }
             },
             "ext": "v0"
           },
-          4095
+          518400
         ]
       ],
       [
@@ -2203,7 +2296,7 @@
             },
             "ext": "v0"
           },
-          4095
+          518400
         ]
       ]
     ]

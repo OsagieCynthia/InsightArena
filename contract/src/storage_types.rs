@@ -42,6 +42,12 @@ pub enum DataKey {
     CategoryIndex(Symbol),
     /// Temporary storage lock for escrow operations (prevents reentrancy)
     EscrowLock,
+    /// Global counter. Tracks the total number of governance proposals.
+    ProposalCount,
+    /// Keyed by proposal_id. Stores governance proposal state.
+    Proposal(u32),
+    /// Keyed by (proposal_id, voter). Tracks whether a user already voted.
+    ProposalVote(u32, Address),
 }
 
 #[contracttype]
