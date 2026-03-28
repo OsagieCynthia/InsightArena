@@ -16,6 +16,7 @@ import { AdminService } from './admin.service';
 import { ListUsersQueryDto } from './dto/list-users-query.dto';
 import { BanUserDto } from './dto/ban-user.dto';
 import { ActivityLogQueryDto } from './dto/activity-log-query.dto';
+import { StatsResponseDto } from './dto/stats-response.dto';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -24,7 +25,7 @@ export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
   @Get('dashboard/stats')
-  async getDashboardStats() {
+  async getDashboardStats(): Promise<StatsResponseDto> {
     return this.adminService.getStats();
   }
 

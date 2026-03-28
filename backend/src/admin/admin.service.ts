@@ -9,19 +9,7 @@ import { ActivityLog } from '../analytics/entities/activity-log.entity';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { ListUsersQueryDto } from './dto/list-users-query.dto';
 import { ActivityLogQueryDto } from './dto/activity-log-query.dto';
-
-interface StatsResponse {
-  total_users: number;
-  active_users_24h: number;
-  active_users_7d: number;
-  total_markets: number;
-  active_markets: number;
-  resolved_markets: number;
-  total_predictions: number;
-  total_volume_stroops: string;
-  total_competitions: number;
-  platform_revenue_stroops: string;
-}
+import { StatsResponseDto } from './dto/stats-response.dto';
 
 @Injectable()
 export class AdminService {
@@ -39,7 +27,7 @@ export class AdminService {
     private readonly analyticsService: AnalyticsService,
   ) {}
 
-  async getStats(): Promise<StatsResponse> {
+  async getStats(): Promise<StatsResponseDto> {
     const now = new Date();
     const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);

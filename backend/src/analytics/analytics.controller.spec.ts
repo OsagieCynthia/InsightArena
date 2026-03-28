@@ -120,7 +120,11 @@ describe('AnalyticsController', () => {
         },
         {
           provide: getRepositoryToken(ActivityLog),
-          useValue: { create: jest.fn(), save: jest.fn(), findAndCount: jest.fn() },
+          useValue: {
+            create: jest.fn(),
+            save: jest.fn(),
+            findAndCount: jest.fn(),
+          },
         },
       ],
     }).compile();
