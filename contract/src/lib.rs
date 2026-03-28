@@ -10,6 +10,7 @@ pub mod escrow;
 pub mod governance;
 pub mod invite;
 pub mod leaderboard;
+pub mod liquidity;
 pub mod market;
 pub mod oracle;
 pub mod prediction;
