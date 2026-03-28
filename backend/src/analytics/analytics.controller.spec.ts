@@ -5,6 +5,7 @@ import { LeaderboardEntry } from '../leaderboard/entities/leaderboard-entry.enti
 import { Market } from '../markets/entities/market.entity';
 import { Prediction } from '../predictions/entities/prediction.entity';
 import { User } from '../users/entities/user.entity';
+import { ActivityLog } from './entities/activity-log.entity';
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
 
@@ -29,14 +30,15 @@ describe('AnalyticsController', () => {
     is_cancelled: false,
     total_pool_stroops: '5000000',
     participant_count: 25,
-    creator: null,
+    creator: {} as User,
     created_at: new Date(),
-  };
+    updated_at: new Date(),
+  } as Market;
 
   const mockPredictions: Prediction[] = [
     {
       id: 'pred-1',
-      user: null,
+      user: {} as User,
       market: mockMarket,
       chosen_outcome: 'Yes',
       stake_amount_stroops: '1000000',
@@ -47,7 +49,7 @@ describe('AnalyticsController', () => {
     },
     {
       id: 'pred-2',
-      user: null,
+      user: {} as User,
       market: mockMarket,
       chosen_outcome: 'Yes',
       stake_amount_stroops: '500000',
@@ -58,7 +60,7 @@ describe('AnalyticsController', () => {
     },
     {
       id: 'pred-3',
-      user: null,
+      user: {} as User,
       market: mockMarket,
       chosen_outcome: 'No',
       stake_amount_stroops: '2000000',
@@ -69,7 +71,7 @@ describe('AnalyticsController', () => {
     },
     {
       id: 'pred-4',
-      user: null,
+      user: {} as User,
       market: mockMarket,
       chosen_outcome: 'Maybe',
       stake_amount_stroops: '1500000',
@@ -114,6 +116,14 @@ describe('AnalyticsController', () => {
               orderBy: jest.fn().mockReturnThis(),
               getOne: jest.fn(),
             }),
+          },
+        },
+        {
+          provide: getRepositoryToken(ActivityLog),
+          useValue: {
+            create: jest.fn(),
+            save: jest.fn(),
+            findAndCount: jest.fn(),
           },
         },
       ],
@@ -166,9 +176,9 @@ describe('AnalyticsController', () => {
         (o) => o.outcome === 'Maybe',
       );
 
-      expect(yesOutcome.count).toBe(2);
-      expect(noOutcome.count).toBe(1);
-      expect(maybeOutcome.count).toBe(1);
+      expect(yesOutcome!.count).toBe(2);
+      expect(noOutcome!.count).toBe(1);
+      expect(maybeOutcome!.count).toBe(1);
     });
 
     it('should calculate positive time_remaining_seconds when market is open', async () => {

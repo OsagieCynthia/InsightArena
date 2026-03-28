@@ -5,6 +5,7 @@ import { LeaderboardEntry } from '../leaderboard/entities/leaderboard-entry.enti
 import { Market } from '../markets/entities/market.entity';
 import { Prediction } from '../predictions/entities/prediction.entity';
 import { User } from '../users/entities/user.entity';
+import { ActivityLog } from './entities/activity-log.entity';
 import { DashboardKpisDto } from './dto/dashboard-kpis.dto';
 import {
   MarketAnalyticsDto,
@@ -37,7 +38,24 @@ export class AnalyticsService {
     private readonly leaderboardRepository: Repository<LeaderboardEntry>,
     @InjectRepository(Market)
     private readonly marketsRepository: Repository<Market>,
+    @InjectRepository(ActivityLog)
+    private readonly activityLogsRepository: Repository<ActivityLog>,
   ) {}
+
+  async logActivity(
+    userId: string,
+    actionType: string,
+    details?: Record<string, unknown> | null,
+    ipAddress?: string,
+  ) {
+    const log = this.activityLogsRepository.create({
+      userId,
+      actionType,
+      actionDetails: details,
+      ipAddress,
+    });
+    return this.activityLogsRepository.save(log);
+  }
 
   async getDashboard(user: User): Promise<DashboardKpisDto> {
     const fullUser = await this.usersRepository.findOne({

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import {
   AnalyticsService,
   accuracyRateFromUser,
@@ -10,6 +10,7 @@ import { User } from '../users/entities/user.entity';
 import { Prediction } from '../predictions/entities/prediction.entity';
 import { LeaderboardEntry } from '../leaderboard/entities/leaderboard-entry.entity';
 import { Market } from '../markets/entities/market.entity';
+import { ActivityLog } from './entities/activity-log.entity';
 
 describe('predictorTierFromReputation', () => {
   it('maps thresholds to tier labels', () => {
@@ -61,9 +62,13 @@ describe('AnalyticsService', () => {
     reputation_score: 840,
     season_points: 0,
     role: 'user',
+    is_banned: false,
+    ban_reason: null,
+    banned_at: null,
+    banned_by: null,
     created_at: new Date(),
     updated_at: new Date(),
-  };
+  } as User;
 
   beforeEach(async () => {
     usersRepository = { findOne: jest.fn() };
@@ -86,6 +91,14 @@ describe('AnalyticsService', () => {
           provide: getRepositoryToken(Market),
           useValue: { findOne: jest.fn(), find: jest.fn() },
         },
+        {
+          provide: getRepositoryToken(ActivityLog),
+          useValue: {
+            create: jest.fn(),
+            save: jest.fn(),
+            findAndCount: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -103,7 +116,7 @@ describe('AnalyticsService', () => {
       getCount: jest.fn().mockResolvedValue(terminal.getCount ?? 0),
       getMany: jest.fn().mockResolvedValue(terminal.getMany ?? []),
     };
-    return chain;
+    return chain as unknown;
   }
 
   function mockLeaderboardQb(entry: LeaderboardEntry | null) {
@@ -112,13 +125,15 @@ describe('AnalyticsService', () => {
       andWhere: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
       getOne: jest.fn().mockResolvedValue(entry),
-    };
+    } as unknown;
   }
 
   it('aggregates KPIs from user, leaderboard entry, and predictions', async () => {
     usersRepository.findOne.mockResolvedValue(baseUser);
     leaderboardRepository.createQueryBuilder.mockReturnValue(
-      mockLeaderboardQb({ rank: 24 } as LeaderboardEntry),
+      mockLeaderboardQb({
+        rank: 24,
+      } as LeaderboardEntry) as SelectQueryBuilder<LeaderboardEntry>,
     );
 
     const market = {
@@ -136,8 +151,13 @@ describe('AnalyticsService', () => {
     let call = 0;
     predictionsRepository.createQueryBuilder.mockImplementation(() => {
       call += 1;
-      if (call === 1) return mockQb({ getCount: 5 });
-      return mockQb({ getMany: [winPred, winPred, winPred, winPred] });
+      if (call === 1)
+        return mockQb({
+          getCount: 5,
+        }) as SelectQueryBuilder<Prediction>;
+      return mockQb({
+        getMany: [winPred, winPred, winPred, winPred],
+      }) as SelectQueryBuilder<Prediction>;
     });
 
     const result = await service.getDashboard({
@@ -159,14 +179,19 @@ describe('AnalyticsService', () => {
   it('uses rank 0 when there is no global leaderboard row', async () => {
     usersRepository.findOne.mockResolvedValue(baseUser);
     leaderboardRepository.createQueryBuilder.mockReturnValue(
-      mockLeaderboardQb(null),
+      mockLeaderboardQb(null) as SelectQueryBuilder<LeaderboardEntry>,
     );
 
     let call = 0;
     predictionsRepository.createQueryBuilder.mockImplementation(() => {
       call += 1;
-      if (call === 1) return mockQb({ getCount: 0 });
-      return mockQb({ getMany: [] });
+      if (call === 1)
+        return mockQb({
+          getCount: 0,
+        }) as SelectQueryBuilder<Prediction>;
+      return mockQb({
+        getMany: [],
+      }) as SelectQueryBuilder<Prediction>;
     });
 
     const result = await service.getDashboard({ id: baseUser.id } as User);
@@ -178,7 +203,7 @@ describe('AnalyticsService', () => {
   it('breaks streak on first loss in resolution order', async () => {
     usersRepository.findOne.mockResolvedValue(baseUser);
     leaderboardRepository.createQueryBuilder.mockReturnValue(
-      mockLeaderboardQb(null),
+      mockLeaderboardQb(null) as SelectQueryBuilder<LeaderboardEntry>,
     );
 
     const mYes = {
@@ -197,13 +222,16 @@ describe('AnalyticsService', () => {
     let call = 0;
     predictionsRepository.createQueryBuilder.mockImplementation(() => {
       call += 1;
-      if (call === 1) return mockQb({ getCount: 0 });
+      if (call === 1)
+        return mockQb({
+          getCount: 0,
+        }) as SelectQueryBuilder<Prediction>;
       return mockQb({
         getMany: [
           { chosen_outcome: 'No', market: mYes } as Prediction,
           { chosen_outcome: 'Yes', market: mNo } as Prediction,
         ],
-      });
+      }) as SelectQueryBuilder<Prediction>;
     });
 
     const result = await service.getDashboard({ id: baseUser.id } as User);

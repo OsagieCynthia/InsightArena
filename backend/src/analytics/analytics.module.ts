@@ -6,10 +6,17 @@ import { Prediction } from '../predictions/entities/prediction.entity';
 import { User } from '../users/entities/user.entity';
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
+import { ActivityLog } from './entities/activity-log.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Prediction, LeaderboardEntry, Market]),
+    TypeOrmModule.forFeature([
+      User,
+      Prediction,
+      LeaderboardEntry,
+      Market,
+      ActivityLog,
+    ]),
   ],
   controllers: [AnalyticsController],
   providers: [AnalyticsService],

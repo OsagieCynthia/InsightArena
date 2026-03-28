@@ -8,7 +8,9 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
+import { BanGuard } from '../common/guards/ban.guard';
 import { PredictionStatsDto } from './dto/prediction-stats.dto';
 import {
   ApiOperation,
@@ -50,6 +52,7 @@ export class MarketsController {
   }
 
   @Post()
+  @UseGuards(BanGuard)
   @HttpCode(HttpStatus.CREATED)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new prediction market' })

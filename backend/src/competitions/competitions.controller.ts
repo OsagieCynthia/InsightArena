@@ -8,7 +8,9 @@ import {
   HttpCode,
   HttpStatus,
   NotFoundException,
+  UseGuards,
 } from '@nestjs/common';
+import { BanGuard } from '../common/guards/ban.guard';
 import {
   ApiTags,
   ApiOperation,
@@ -32,6 +34,7 @@ export class CompetitionsController {
   constructor(private readonly competitionsService: CompetitionsService) {}
 
   @Post()
+  @UseGuards(BanGuard)
   @HttpCode(HttpStatus.CREATED)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new competition' })

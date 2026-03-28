@@ -6,7 +6,9 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
+import { BanGuard } from '../common/guards/ban.guard';
 import {
   ApiTags,
   ApiOperation,
@@ -30,6 +32,7 @@ export class PredictionsController {
   constructor(private readonly predictionsService: PredictionsService) {}
 
   @Post()
+  @UseGuards(BanGuard)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Submit a prediction on a market' })
   @ApiResponse({
