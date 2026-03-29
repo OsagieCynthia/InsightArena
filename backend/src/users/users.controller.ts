@@ -4,6 +4,7 @@ import {
   Patch,
   Param,
   Body,
+  Query,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
@@ -16,6 +17,10 @@ import { PublicUserDto } from './dto/public-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
+import {
+  ListUserPredictionsDto,
+  PaginatedPublicUserPredictionsResponse,
+} from './dto/list-user-predictions.dto';
 
 @Controller('users')
 export class UsersController {
@@ -64,5 +69,24 @@ export class UsersController {
     return plainToInstance(PublicUserDto, user, {
       excludeExtraneousValues: true,
     });
+  }
+
+  @Get(':address/predictions')
+  @Public()
+  @UsePipes(
+    new ValidationPipe({ whitelist: true, forbidNonWhitelisted: false }),
+  )
+  @ApiOperation({
+    summary: "Get a user's predictions for resolved markets (public)",
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Paginated predictions for resolved markets only',
+  })
+  async getPublicPredictions(
+    @Param('address') address: string,
+    @Query() query: ListUserPredictionsDto,
+  ): Promise<PaginatedPublicUserPredictionsResponse> {
+    return this.usersService.findPublicPredictionsByAddress(address, query);
   }
 }

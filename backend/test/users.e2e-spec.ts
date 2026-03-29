@@ -5,10 +5,12 @@ import { AppModule } from './../src/app.module';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { User } from '../src/users/entities/user.entity';
 import { Repository } from 'typeorm';
+import { Prediction } from '../src/predictions/entities/prediction.entity';
 
 describe('Users (e2e)', () => {
   let app: INestApplication;
   let usersRepository: Repository<User>;
+  let predictionsRepository: Repository<Prediction>;
 
   const mockUser: User = {
     id: '123e4567-e89b-12d3-a456-426614174000',
@@ -34,11 +36,18 @@ describe('Users (e2e)', () => {
       .useValue({
         findOneBy: jest.fn(),
       })
+      .overrideProvider(getRepositoryToken(Prediction))
+      .useValue({
+        createQueryBuilder: jest.fn(),
+      })
       .compile();
 
     app = moduleFixture.createNestApplication();
     usersRepository = moduleFixture.get<Repository<User>>(
       getRepositoryToken(User),
+    );
+    predictionsRepository = moduleFixture.get<Repository<Prediction>>(
+      getRepositoryToken(Prediction),
     );
     if (app) {
       await app.init();
@@ -162,6 +171,40 @@ describe('Users (e2e)', () => {
           const message = res.body.error.message;
           expect(message).toContain(unknownAddress);
           expect(message).toContain('not found');
+        });
+    });
+  });
+
+  describe('GET /users/:address/predictions', () => {
+    it('should return public predictions from resolved markets only', () => {
+      jest.spyOn(usersRepository, 'findOneBy').mockResolvedValue(mockUser);
+
+      const queryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
+      };
+
+      jest
+        .spyOn(predictionsRepository, 'createQueryBuilder')
+        .mockReturnValue(
+          queryBuilder as unknown as ReturnType<
+            Repository<Prediction>['createQueryBuilder']
+          >,
+        );
+
+      return request(app.getHttpServer())
+        .get(`/users/${mockUser.stellar_address}/predictions`)
+        .expect(200)
+        .expect((res: { body: { data: { data: unknown[] } } }) => {
+          expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+            'market.is_resolved = true',
+          );
+          expect(res.body.data.data).toEqual([]);
         });
     });
   });
