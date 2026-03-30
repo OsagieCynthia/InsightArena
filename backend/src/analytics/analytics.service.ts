@@ -18,6 +18,10 @@ import {
   TrendDataPointDto,
   CategoryPerformanceDto,
 } from './dto/user-trends.dto';
+import {
+  CategoryStatsDto,
+  CategoryAnalyticsResponseDto,
+} from './dto/category-analytics.dto';
 
 /** Tier thresholds: Bronze < 200, Silver < 500, Gold < 1000, Platinum ≥ 1000 */
 export function predictorTierFromReputation(reputationScore: number): string {
@@ -397,5 +401,75 @@ export class AnalyticsService {
       prediction_count: stats.total,
       profit_loss_stroops: stats.pnl.toString(),
     }));
+  }
+
+  /**
+   * Get category analytics with trending calculation
+   */
+  async getCategoryAnalytics(): Promise<CategoryAnalyticsResponseDto> {
+    const markets = await this.marketsRepository.find();
+
+    const categoryMap = new Map<
+      string,
+      {
+        total: number;
+        active: number;
+        volume: bigint;
+        participants: number[];
+      }
+    >();
+
+    markets.forEach((market) => {
+      const category = market.category || 'Unknown';
+      const current = categoryMap.get(category) || {
+        total: 0,
+        active: 0,
+        volume: 0n,
+        participants: [],
+      };
+
+      current.total++;
+      if (!market.is_resolved && !market.is_cancelled) {
+        current.active++;
+      }
+      current.volume += BigInt(market.total_pool_stroops || 0);
+      current.participants.push(market.participant_count);
+
+      categoryMap.set(category, current);
+    });
+
+    const categories: CategoryStatsDto[] = Array.from(
+      categoryMap.entries(),
+    ).map(([name, stats]) => {
+      const avgParticipants =
+        stats.participants.length > 0
+          ? Math.round(
+              stats.participants.reduce((a, b) => a + b, 0) /
+                stats.participants.length,
+            )
+          : 0;
+
+      const trending = this.isCategoryTrending(stats.active, stats.total);
+
+      return {
+        name,
+        total_markets: stats.total,
+        active_markets: stats.active,
+        total_volume_stroops: stats.volume.toString(),
+        avg_participants: avgParticipants,
+        trending,
+      };
+    });
+
+    return {
+      categories: categories.sort((a, b) => b.total_markets - a.total_markets),
+      generated_at: new Date(),
+    };
+  }
+
+  private isCategoryTrending(active: number, total: number): boolean {
+    if (total === 0) return false;
+    const activeRatio = active / total;
+    return activeRatio > 0.5;
   }
 }

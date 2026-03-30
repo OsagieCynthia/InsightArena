@@ -13,6 +13,7 @@ import { DashboardKpisDto } from './dto/dashboard-kpis.dto';
 import { MarketAnalyticsDto } from './dto/market-analytics.dto';
 import { MarketHistoryResponseDto } from './dto/market-history.dto';
 import { UserTrendsDto } from './dto/user-trends.dto';
+import { CategoryAnalyticsResponseDto } from './dto/category-analytics.dto';
 
 @ApiTags('Analytics')
 @Controller('analytics')
@@ -77,5 +78,18 @@ export class AnalyticsController {
   @ApiResponse({ status: 404, description: 'User not found' })
   async getUserTrends(@Param('address') address: string): Promise<UserTrendsDto> {
     return this.analyticsService.getUserTrends(address);
+  }
+
+  @Get('categories')
+  @Public()
+  @ApiOperation({ summary: 'Get category analytics and statistics' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Category analytics including market counts, volume, participants, and trending status',
+    type: CategoryAnalyticsResponseDto,
+  })
+  async getCategoryAnalytics(): Promise<CategoryAnalyticsResponseDto> {
+    return this.analyticsService.getCategoryAnalytics();
   }
 }
