@@ -2,6 +2,7 @@
 #![allow(non_snake_case)]
 
 pub mod analytics;
+pub mod conditional;
 pub mod config;
 pub mod dispute;
 pub mod errors;
@@ -23,10 +24,11 @@ pub mod ttl;
 pub use crate::config::Config;
 pub use crate::errors::InsightArenaError;
 pub use crate::governance::{Proposal, ProposalType};
+pub use crate::liquidity::{calculate_lp_tokens, calculate_liquidity_value, calculate_swap_output};
 pub use crate::market::CreateMarketParams;
 pub use crate::storage_types::{
     CreatorStats, DataKey, InviteCode, LeaderboardEntry, LeaderboardSnapshot, Market, MarketStats,
-    PlatformStats, Prediction, Season, UserProfile,
+    PlatformStats, Prediction, Season, UserProfile, LiquidityPool, LPPosition, SwapRecord,
 };
 
 use soroban_sdk::{contract, contractimpl, Address, Env, Symbol, Vec};
@@ -170,6 +172,18 @@ impl InsightArenaContract {
         market_id: u64,
     ) -> Result<(), InsightArenaError> {
         market::cancel_market(&env, caller, market_id)
+    }
+
+    // ── Conditional Markets ───────────────────────────────────────────────────
+
+    pub fn create_conditional_market(
+        env: Env,
+        creator: Address,
+        parent_market_id: u64,
+        required_outcome: Symbol,
+        params: CreateMarketParams,
+    ) -> Result<u64, InsightArenaError> {
+        conditional::create_conditional_market(&env, creator, parent_market_id, required_outcome, params)
     }
 
     // ── Dispute ───────────────────────────────────────────────────────────────
@@ -444,6 +458,67 @@ impl InsightArenaContract {
     /// Return platform-wide aggregated stats using cached counters.
     pub fn get_platform_stats(env: Env) -> PlatformStats {
         analytics::get_platform_stats(env)
+    }
+
+    // ── Liquidity Pool / AMM ──────────────────────────────────────────────────
+
+    /// Add liquidity to a market pool and receive LP tokens
+    pub fn add_liquidity(
+        env: Env,
+        provider: Address,
+        market_id: u64,
+        amount: i128,
+    ) -> Result<i128, InsightArenaError> {
+        liquidity::add_liquidity(&env, provider, market_id, amount)
+    }
+
+    /// Remove liquidity from a pool by burning LP tokens
+    pub fn remove_liquidity(
+        env: Env,
+        provider: Address,
+        market_id: u64,
+        lp_tokens: i128,
+    ) -> Result<i128, InsightArenaError> {
+        liquidity::remove_liquidity(&env, provider, market_id, lp_tokens)
+    }
+
+    /// Swap from one outcome position to another
+    pub fn swap_outcome(
+        env: Env,
+        trader: Address,
+        market_id: u64,
+        from_outcome: Symbol,
+        to_outcome: Symbol,
+        amount_in: i128,
+        min_amount_out: i128,
+    ) -> Result<i128, InsightArenaError> {
+        liquidity::swap_outcome(
+            &env,
+            trader,
+            market_id,
+            from_outcome,
+            to_outcome,
+            amount_in,
+            min_amount_out,
+        )
+    }
+
+    /// Get current price of an outcome in the pool
+    pub fn get_outcome_price(
+        env: Env,
+        market_id: u64,
+        outcome: Symbol,
+    ) -> Result<i128, InsightArenaError> {
+        liquidity::get_outcome_price(&env, market_id, outcome)
+    }
+
+    /// Get LP position for a provider
+    pub fn get_lp_position(
+        env: Env,
+        provider: Address,
+        market_id: u64,
+    ) -> Result<crate::storage_types::LPPosition, InsightArenaError> {
+        liquidity::get_lp_position_public(&env, provider, market_id)
     }
 }
 

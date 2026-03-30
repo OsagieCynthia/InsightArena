@@ -27,6 +27,7 @@ import {
 } from './dto/report-query.dto';
 import { ResolveMarketDto } from './dto/resolve-market.dto';
 import { StatsResponseDto } from './dto/stats-response.dto';
+import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 
 @Injectable()
 export class AdminService {
@@ -176,6 +177,36 @@ export class AdminService {
     await this.analyticsService.logActivity(user.id, 'USER_UNBANNED', {
       unbanned_by: adminId,
     });
+
+    return user;
+  }
+
+  async updateUserRole(
+    id: string,
+    dto: UpdateUserRoleDto,
+    adminId: string,
+  ): Promise<User> {
+    if (id === adminId) {
+      throw new BadRequestException('You cannot change your own role');
+    }
+
+    const user = await this.usersRepository.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+
+    const previousRole = user.role;
+    user.role = dto.role;
+
+    await this.usersRepository.save(user);
+
+    await this.analyticsService.logActivity(adminId, 'USER_ROLE_CHANGED', {
+      target_user_id: id,
+      previous_role: previousRole,
+      new_role: dto.role,
+    });
+
+    this.logger.log(
+      `Admin ${adminId} changed role of user ${id} from "${previousRole}" to "${dto.role}"`,
+    );
 
     return user;
   }

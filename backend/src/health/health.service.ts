@@ -10,6 +10,9 @@ import {
 import { InjectDataSource } from '@nestjs/typeorm';
 import * as os from 'os';
 import { DataSource } from 'typeorm';
+import { DetailedHealthDto } from './dto/detailed-health.dto';
+
+const START_TIME = Date.now();
 
 @Injectable()
 export class HealthService {
@@ -60,5 +63,78 @@ export class HealthService {
       type: 'ping',
       timestamp: new Date().toISOString(),
     };
+  }
+
+  /**
+   * Detailed health check with individual component status and latency for monitoring.
+   * Checks database connectivity, Soroban RPC reachability, and cache status.
+   */
+  async checkDetailed(): Promise<DetailedHealthDto> {
+    const [dbResult, sorobanResult] = await Promise.all([
+      this.checkDatabase(),
+      this.checkSoroban(),
+    ]);
+
+    const overallStatus =
+      dbResult.status === 'down'
+        ? 'down'
+        : dbResult.status === 'degraded' || sorobanResult.status === 'degraded'
+          ? 'degraded'
+          : 'healthy';
+
+    return {
+      status: overallStatus,
+      database: dbResult,
+      soroban: sorobanResult,
+      cache: this.getCacheStatus(),
+      uptime_seconds: Math.floor((Date.now() - START_TIME) / 1000),
+    };
+  }
+
+  private async checkDatabase(): Promise<{
+    status: string;
+    latency_ms: number;
+  }> {
+    const start = Date.now();
+    try {
+      await this.dataSource.query('SELECT 1');
+      return { status: 'up', latency_ms: Date.now() - start };
+    } catch {
+      return { status: 'down', latency_ms: Date.now() - start };
+    }
+  }
+
+  private async checkSoroban(): Promise<{
+    status: string;
+    latency_ms: number;
+  }> {
+    const rpcUrl =
+      process.env.SOROBAN_RPC_URL ?? 'https://soroban-testnet.stellar.org';
+    const start = Date.now();
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const response = await fetch(rpcUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'getHealth',
+          params: [],
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const latency = Date.now() - start;
+      return { status: response.ok ? 'up' : 'degraded', latency_ms: latency };
+    } catch {
+      return { status: 'down', latency_ms: Date.now() - start };
+    }
+  }
+
+  /** Cache is in-memory (challenge cache); always 'up'. Hit rate is not tracked externally. */
+  private getCacheStatus(): { status: string; hit_rate: number } {
+    return { status: 'up', hit_rate: 0 };
   }
 }

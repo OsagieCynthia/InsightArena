@@ -77,7 +77,7 @@ export class Market {
 
   @Column({ type: 'timestamptz', nullable: true })
   @IsOptional()
-  featured_at: Date;
+  featured_at: Date | null;
 
   @Column({ type: 'bigint', default: '0' })
   @IsString()

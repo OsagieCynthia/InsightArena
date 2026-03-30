@@ -3,6 +3,7 @@ import { HealthCheckResult } from '@nestjs/terminus';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Public } from '../common/decorators/public.decorator';
 import { HealthService } from './health.service';
+import { DetailedHealthDto } from './dto/detailed-health.dto';
 
 @ApiTags('Health')
 @Controller('health')
@@ -33,5 +34,17 @@ export class HealthController {
   })
   checkPing() {
     return this.healthService.checkPing();
+  }
+
+  @Get('detailed')
+  @Public()
+  @ApiOperation({ summary: 'Detailed health status for monitoring' })
+  @ApiResponse({
+    status: 200,
+    description: 'Detailed health status of all components',
+    type: DetailedHealthDto,
+  })
+  async checkDetailed(): Promise<DetailedHealthDto> {
+    return this.healthService.checkDetailed();
   }
 }

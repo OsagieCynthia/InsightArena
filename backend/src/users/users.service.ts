@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Prediction } from '../predictions/entities/prediction.entity';
@@ -9,9 +13,21 @@ import {
   PublicUserPredictionItem,
 } from './dto/list-user-predictions.dto';
 import { User } from './entities/user.entity';
+import { UserPreferences } from './entities/user-preferences.entity';
+import { UserFollow } from './entities/user-follow.entity';
 import { Market } from '../markets/entities/market.entity';
 import { Notification } from '../notifications/entities/notification.entity';
 import { UpdateUserDto } from './dto/update-user.dto';
+import {
+  UpdateUserPreferencesDto,
+  UserPreferencesResponseDto,
+} from './dto/user-preferences.dto';
+import {
+  PaginationDto,
+  UserFollowResponseDto,
+  FollowersListDto,
+  FollowingListDto,
+} from './dto/user-follow.dto';
 
 import { CompetitionParticipant } from '../competitions/entities/competition-participant.entity';
 import {
@@ -25,12 +41,21 @@ import {
   UserMarketsSortBy,
   UserMarketsSortOrder,
 } from './dto/list-user-markets.dto';
+import { UserBookmark } from '../markets/entities/user-bookmark.entity';
+import {
+  ListUserBookmarksDto,
+  PaginatedUserBookmarksResponse,
+} from './dto/list-user-bookmarks.dto';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    @InjectRepository(UserPreferences)
+    private readonly preferencesRepository: Repository<UserPreferences>,
+    @InjectRepository(UserFollow)
+    private readonly followRepository: Repository<UserFollow>,
     @InjectRepository(Prediction)
     private readonly predictionsRepository: Repository<Prediction>,
     @InjectRepository(Market)
@@ -39,6 +64,8 @@ export class UsersService {
     private readonly notificationsRepository: Repository<Notification>,
     @InjectRepository(CompetitionParticipant)
     private readonly participantsRepository: Repository<CompetitionParticipant>,
+    @InjectRepository(UserBookmark)
+    private readonly userBookmarksRepository: Repository<UserBookmark>,
   ) {}
 
   async findAll(): Promise<User[]> {
@@ -227,6 +254,31 @@ export class UsersService {
     return { data, total, page, limit };
   }
 
+  async findUserBookmarks(
+    userId: string,
+    dto: ListUserBookmarksDto,
+  ): Promise<PaginatedUserBookmarksResponse> {
+    const page = dto.page ?? 1;
+    const limit = Math.min(dto.limit ?? 20, 50);
+    const skip = (page - 1) * limit;
+
+    const [bookmarks, total] = await this.userBookmarksRepository.findAndCount({
+      where: { user: { id: userId } },
+      relations: ['market'],
+      order: { created_at: 'DESC' },
+      skip,
+      take: limit,
+    });
+
+    const data = bookmarks.map((b) => ({
+      id: b.id,
+      market: b.market,
+      created_at: b.created_at,
+    }));
+
+    return { data, total, page, limit };
+  }
+
   async exportUserData(userId: string) {
     const user = await this.findById(userId);
 
@@ -295,6 +347,159 @@ export class UsersService {
         score: c.score,
       })),
       exported_at: new Date().toISOString(),
+    };
+  }
+
+  async getOrCreatePreferences(userId: string): Promise<UserPreferences> {
+    let prefs = await this.preferencesRepository.findOne({
+      where: { userId },
+    });
+
+    if (!prefs) {
+      prefs = this.preferencesRepository.create({ userId });
+      prefs = await this.preferencesRepository.save(prefs);
+    }
+
+    return prefs;
+  }
+
+  async updatePreferences(
+    userId: string,
+    dto: UpdateUserPreferencesDto,
+  ): Promise<UserPreferencesResponseDto> {
+    const prefs = await this.getOrCreatePreferences(userId);
+
+    if (dto.email_notifications !== undefined) {
+      prefs.email_notifications = dto.email_notifications;
+    }
+    if (dto.market_resolution_notifications !== undefined) {
+      prefs.market_resolution_notifications =
+        dto.market_resolution_notifications;
+    }
+    if (dto.competition_notifications !== undefined) {
+      prefs.competition_notifications = dto.competition_notifications;
+    }
+    if (dto.leaderboard_notifications !== undefined) {
+      prefs.leaderboard_notifications = dto.leaderboard_notifications;
+    }
+    if (dto.marketing_emails !== undefined) {
+      prefs.marketing_emails = dto.marketing_emails;
+    }
+
+    const updated = await this.preferencesRepository.save(prefs);
+
+    return {
+      id: updated.id,
+      email_notifications: updated.email_notifications,
+      market_resolution_notifications: updated.market_resolution_notifications,
+      competition_notifications: updated.competition_notifications,
+      leaderboard_notifications: updated.leaderboard_notifications,
+      marketing_emails: updated.marketing_emails,
+      created_at: updated.created_at,
+      updated_at: updated.updated_at,
+    };
+  }
+
+  async followUser(
+    followerId: string,
+    followingAddress: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const follower = await this.findById(followerId);
+    const following = await this.findByAddress(followingAddress);
+
+    if (follower.id === following.id) {
+      throw new BadRequestException('Cannot follow yourself');
+    }
+
+    const existing = await this.followRepository.findOne({
+      where: { follower_id: followerId, following_id: following.id },
+    });
+
+    if (existing) {
+      throw new BadRequestException('Already following this user');
+    }
+
+    await this.followRepository.save({
+      follower_id: followerId,
+      following_id: following.id,
+    });
+
+    return { success: true, message: 'User followed successfully' };
+  }
+
+  async unfollowUser(
+    followerId: string,
+    followingAddress: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const following = await this.findByAddress(followingAddress);
+
+    const result = await this.followRepository.delete({
+      follower_id: followerId,
+      following_id: following.id,
+    });
+
+    if (result.affected === 0) {
+      throw new NotFoundException('Follow relationship not found');
+    }
+
+    return { success: true, message: 'User unfollowed successfully' };
+  }
+
+  async getFollowers(
+    address: string,
+    dto: PaginationDto,
+  ): Promise<FollowersListDto> {
+    const user = await this.findByAddress(address);
+    const page = dto.page ?? 1;
+    const limit = Math.min(dto.limit ?? 20, 50);
+    const skip = (page - 1) * limit;
+
+    const [followers, total] = await this.followRepository
+      .createQueryBuilder('follow')
+      .leftJoinAndSelect('follow.follower', 'follower')
+      .where('follow.following_id = :userId', { userId: user.id })
+      .orderBy('follow.created_at', 'DESC')
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    const data = followers.map((f) => this.mapUserToFollowResponse(f.follower));
+
+    return { data, total, page, limit };
+  }
+
+  async getFollowing(
+    address: string,
+    dto: PaginationDto,
+  ): Promise<FollowingListDto> {
+    const user = await this.findByAddress(address);
+    const page = dto.page ?? 1;
+    const limit = Math.min(dto.limit ?? 20, 50);
+    const skip = (page - 1) * limit;
+
+    const [following, total] = await this.followRepository
+      .createQueryBuilder('follow')
+      .leftJoinAndSelect('follow.following', 'following')
+      .where('follow.follower_id = :userId', { userId: user.id })
+      .orderBy('follow.created_at', 'DESC')
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    const data = following.map((f) =>
+      this.mapUserToFollowResponse(f.following),
+    );
+
+    return { data, total, page, limit };
+  }
+
+  private mapUserToFollowResponse(user: User): UserFollowResponseDto {
+    return {
+      id: user.id,
+      stellar_address: user.stellar_address,
+      username: user.username,
+      avatar_url: user.avatar_url,
+      reputation_score: user.reputation_score,
     };
   }
 }

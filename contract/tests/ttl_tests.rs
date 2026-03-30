@@ -153,3 +153,41 @@ fn test_ttl_multiple_extensions() {
 
     assert!(ttl >= LEDGER_BUMP_MARKET - 14_400);
 }
+
+#[test]
+fn test_ttl_after_prediction_submission() {
+    // Test that TTL is properly set when a prediction is first submitted
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = deploy(&env);
+    let creator = Address::generate(&env);
+    let predictor = Address::generate(&env);
+    let token = client.get_config().xlm_token;
+
+    let params = CreateMarketParams {
+        title: String::from_str(&env, "Prediction TTL Test"),
+        description: String::from_str(&env, "Test TTL on prediction submission"),
+        category: Symbol::new(&env, "Sports"),
+        outcomes: vec![&env, symbol_short!("yes"), symbol_short!("no")],
+        end_time: env.ledger().timestamp() + 1_000,
+        resolution_time: env.ledger().timestamp() + 2_000,
+        dispute_window: 86_400,
+        creator_fee_bps: 100,
+        min_stake: 10_000_000,
+        max_stake: 100_000_000,
+        is_public: true,
+    };
+
+    let market_id = client.create_market(&creator, &params);
+    fund(&env, &token, &predictor, 30_000_000);
+    client.submit_prediction(&predictor, &market_id, &symbol_short!("yes"), &20_000_000);
+
+    // Verify TTL is set for the prediction
+    let ttl = env.as_contract(&client.address, || {
+        env.storage()
+            .persistent()
+            .get_ttl(&DataKey::Prediction(market_id, predictor.clone()))
+    });
+
+    assert!(ttl >= LEDGER_BUMP_MARKET - 14_400);
+}

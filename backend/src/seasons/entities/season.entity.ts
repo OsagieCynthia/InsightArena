@@ -47,6 +47,10 @@ export class Season {
   @Column({ type: 'boolean', default: false })
   is_finalized: boolean;
 
+  @ApiProperty({ example: 0 })
+  @Column({ type: 'int', default: 0 })
+  participant_count: number;
+
   @ApiPropertyOptional({
     description: 'Set when the season is finalized; joined for list responses',
   })

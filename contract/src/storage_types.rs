@@ -64,6 +64,13 @@ pub enum DataKey {
     SwapHistory(u64),
     /// Keyed by market_id. Stores rolling 24h pool volume.
     PoolVolume(u64),
+
+    // Conditional Market keys
+    ConditionalMarket(u64),                // market_id -> ConditionalMarket
+    ConditionalChildren(u64),              // parent_market_id -> Vec<u64>
+    ConditionalParent(u64),                // market_id -> u64 (parent_market_id)
+    ConditionalChain(u64),                 // market_id -> ConditionalChain
+    ConditionalDepth(u64),                 // market_id -> u32
 }
 
 #[contracttype]
@@ -266,7 +273,7 @@ impl LiquidityPool {
         let total_liquidity = initial_reserves
             .values()
             .iter()
-            .fold(0i128, |acc, val| acc + val);
+            .sum::<i128>();
 
         Self {
             market_id,
@@ -516,4 +523,50 @@ impl InviteCode {
             is_active: true,
         }
     }
+}
+
+// ── Conditional Market Types ──────────────────────────────────────────────────
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct ConditionalMarket {
+    pub market_id: u64,
+    pub parent_market_id: u64,
+    pub required_outcome: Symbol,
+    pub is_activated: bool,
+    pub activation_time: Option<u64>,
+    pub conditional_depth: u32,
+    pub created_at: u64,
+}
+
+impl ConditionalMarket {
+    pub fn new(
+        market_id: u64,
+        parent_market_id: u64,
+        required_outcome: Symbol,
+        conditional_depth: u32,
+        created_at: u64,
+    ) -> Self {
+        Self {
+            market_id,
+            parent_market_id,
+            required_outcome,
+            is_activated: false,
+            activation_time: None,
+            conditional_depth,
+            created_at,
+        }
+    }
+
+    pub fn activate(&mut self, activation_time: u64) {
+        self.is_activated = true;
+        self.activation_time = Some(activation_time);
+    }
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct ConditionalChain {
+    pub market_ids: Vec<u64>,
+    pub depth: u32,
 }

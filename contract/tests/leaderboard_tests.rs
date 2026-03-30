@@ -174,3 +174,21 @@ fn test_leaderboard_tie_handling() {
     assert_eq!(client.get_user_season_points(&user1, &season_id), 100);
     assert_eq!(client.get_user_season_points(&user2, &season_id), 100);
 }
+
+#[test]
+fn test_update_leaderboard_empty_entries() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (client, admin, xlm_token) = deploy(&env);
+
+    let reward_pool = 15_000_000;
+    fund_reward_pool(&env, &client, &admin, &xlm_token, reward_pool);
+
+    let season_id = client.create_season(&admin, &100, &200, &reward_pool);
+    let empty_entries = vec![&env];
+
+    client.update_leaderboard(&admin, &season_id, &empty_entries);
+
+    let snapshot = client.get_leaderboard(&season_id);
+    assert_eq!(snapshot.entries.len(), 0);
+}

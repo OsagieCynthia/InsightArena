@@ -21,6 +21,7 @@ import { ModerateCommentDto } from './dto/moderate-comment.dto';
 import { ReportQueryDto } from './dto/report-query.dto';
 import { ResolveMarketDto } from './dto/resolve-market.dto';
 import { StatsResponseDto } from './dto/stats-response.dto';
+import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -55,6 +56,19 @@ export class AdminController {
   async unbanUser(@Param('id') id: string, @Request() req: any) {
     return this.adminService.unbanUser(
       id,
+      (req as { user: { id: string } }).user.id,
+    );
+  }
+
+  @Patch('users/:id/role')
+  async updateUserRole(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserRoleDto,
+    @Request() req: any,
+  ) {
+    return this.adminService.updateUserRole(
+      id,
+      dto,
       (req as { user: { id: string } }).user.id,
     );
   }

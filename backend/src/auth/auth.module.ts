@@ -3,9 +3,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { User } from '../users/entities/user.entity';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { RateLimitService } from './rate-limit.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
@@ -13,6 +15,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     PassportModule,
     ConfigModule,
     TypeOrmModule.forFeature([User]),
+    ThrottlerModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -25,7 +28,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, RateLimitService],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

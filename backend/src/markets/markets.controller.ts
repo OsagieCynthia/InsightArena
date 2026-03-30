@@ -16,12 +16,14 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/role.enum';
 import { BanGuard } from '../common/guards/ban.guard';
 import { User } from '../users/entities/user.entity';
+import { BulkCreateMarketsDto } from './dto/bulk-create-markets.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { CreateMarketDto } from './dto/create-market.dto';
 import {
@@ -29,6 +31,10 @@ import {
   PaginatedMarketsResponse,
 } from './dto/list-markets.dto';
 import { PredictionStatsDto } from './dto/prediction-stats.dto';
+import {
+  PaginatedTrendingMarketsResponse,
+  TrendingMarketsQueryDto,
+} from './dto/trending-markets.dto';
 import { Comment } from './entities/comment.entity';
 import { MarketTemplate } from './entities/market-template.entity';
 import { Market } from './entities/market.entity';
@@ -49,6 +55,19 @@ export class MarketsController {
   })
   async getTemplates(): Promise<MarketTemplate[]> {
     return this.marketsService.getTemplates();
+  }
+
+  @Get('trending')
+  @Public()
+  @ApiOperation({ summary: 'Get trending/popular markets' })
+  @ApiResponse({
+    status: 200,
+    description: 'Paginated trending markets sorted by trending score',
+  })
+  async getTrendingMarkets(
+    @Query() query: TrendingMarketsQueryDto,
+  ): Promise<PaginatedTrendingMarketsResponse> {
+    return this.marketsService.getTrendingMarkets(query);
   }
 
   @Get(':id/predictions')
@@ -79,6 +98,31 @@ export class MarketsController {
     @CurrentUser() user: User,
   ): Promise<Market> {
     return this.marketsService.create(dto, user);
+  }
+
+  @Post('bulk')
+  @UseGuards(BanGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @HttpCode(HttpStatus.CREATED)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Bulk create prediction markets (max 10 per request)',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Markets created',
+    type: [Market],
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error or exceeds limit',
+  })
+  @ApiResponse({ status: 502, description: 'Soroban contract call failed' })
+  async bulkCreateMarkets(
+    @Body() dto: BulkCreateMarketsDto,
+    @CurrentUser() user: User,
+  ): Promise<Market[]> {
+    return this.marketsService.createBulk(dto.markets, user);
   }
 
   @Get()
@@ -164,5 +208,37 @@ export class MarketsController {
   @ApiResponse({ status: 404, description: 'Market not found' })
   async getComments(@Param('id') id: string): Promise<Comment[]> {
     return this.marketsService.getComments(id);
+  }
+
+  @Get(':id/report')
+  @Public()
+  @ApiOperation({
+    summary: 'Generate detailed market report with anonymized predictions',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Market report with outcome distribution and timeline',
+  })
+  @ApiResponse({ status: 404, description: 'Market not found' })
+  async getMarketReport(@Param('id') id: string): Promise<any> {
+    return this.marketsService.generateMarketReport(id);
+  }
+
+  @Post(':id/bookmark')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Bookmark a market' })
+  @ApiResponse({ status: 201, description: 'Market bookmarked' })
+  @ApiResponse({ status: 404, description: 'Market not found' })
+  async bookmarkMarket(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.marketsService.addBookmark(id, user);
+  }
+
+  @Delete(':id/bookmark')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Remove a market bookmark' })
+  @ApiResponse({ status: 200, description: 'Bookmark removed' })
+  @ApiResponse({ status: 404, description: 'Market not found' })
+  async removeBookmark(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.marketsService.removeBookmark(id, user);
   }
 }

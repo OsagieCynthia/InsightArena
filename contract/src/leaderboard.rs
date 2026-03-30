@@ -1,6 +1,6 @@
 use crate::errors::InsightArenaError;
 use crate::storage_types::{DataKey, LeaderboardSnapshot, Season, UserProfile};
-use soroban_sdk::{Address, Env, Vec};
+use soroban_sdk::{Address, Env};
 
 /// `stake_bonus = floor(stake_xlm / 10)` → `floor(stake_stroops / 10^8 stroops)`.
 const STROOPS_PER_STAKE_POINT: i128 = 100_000_000;

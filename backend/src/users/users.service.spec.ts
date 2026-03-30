@@ -4,6 +4,8 @@ import { NotFoundException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { UsersService } from './users.service';
 import { User } from './entities/user.entity';
+import { UserPreferences } from './entities/user-preferences.entity';
+import { UserFollow } from './entities/user-follow.entity';
 import { Prediction } from '../predictions/entities/prediction.entity';
 import { Market } from '../markets/entities/market.entity';
 import { Notification } from '../notifications/entities/notification.entity';
@@ -16,6 +18,7 @@ import {
   UserMarketsSortBy,
   UserMarketsSortOrder,
 } from './dto/list-user-markets.dto';
+import { UserBookmark } from '../markets/entities/user-bookmark.entity';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -57,6 +60,21 @@ describe('UsersService', () => {
           },
         },
         {
+          provide: getRepositoryToken(UserPreferences),
+          useValue: {
+            findOneBy: jest.fn(),
+            save: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(UserFollow),
+          useValue: {
+            find: jest.fn(),
+            delete: jest.fn(),
+            save: jest.fn(),
+          },
+        },
+        {
           provide: getRepositoryToken(Prediction),
           useValue: {
             createQueryBuilder: jest.fn(),
@@ -81,6 +99,16 @@ describe('UsersService', () => {
           useValue: {
             createQueryBuilder: jest.fn(),
             find: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(UserBookmark),
+          useValue: {
+            findAndCount: jest.fn(),
+            findOne: jest.fn(),
+            create: jest.fn(),
+            save: jest.fn(),
+            delete: jest.fn(),
           },
         },
       ],
@@ -155,7 +183,11 @@ describe('UsersService', () => {
 
       jest
         .spyOn(participantsRepository, 'createQueryBuilder')
-        .mockReturnValue(queryBuilder as any);
+        .mockReturnValue(
+          queryBuilder as any as ReturnType<
+            typeof participantsRepository.createQueryBuilder
+          >,
+        );
 
       const result = await service.findUserCompetitions(
         mockUser.stellar_address,
@@ -231,7 +263,11 @@ describe('UsersService', () => {
 
       jest
         .spyOn(predictionsRepository, 'createQueryBuilder')
-        .mockReturnValue(queryBuilder as any);
+        .mockReturnValue(
+          queryBuilder as any as ReturnType<
+            typeof predictionsRepository.createQueryBuilder
+          >,
+        );
 
       const result = await service.findPublicPredictionsByAddress(
         mockUser.stellar_address,
@@ -269,7 +305,11 @@ describe('UsersService', () => {
       queryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
       jest
         .spyOn(marketsRepository, 'createQueryBuilder')
-        .mockReturnValue(queryBuilder as any);
+        .mockReturnValue(
+          queryBuilder as any as ReturnType<
+            typeof marketsRepository.createQueryBuilder
+          >,
+        );
 
       const result = await service.findMarketsByAddress(
         mockUser.stellar_address,
@@ -292,7 +332,11 @@ describe('UsersService', () => {
       queryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
       jest
         .spyOn(marketsRepository, 'createQueryBuilder')
-        .mockReturnValue(queryBuilder as any);
+        .mockReturnValue(
+          queryBuilder as any as ReturnType<
+            typeof marketsRepository.createQueryBuilder
+          >,
+        );
 
       await service.findMarketsByAddress(mockUser.stellar_address, {
         status: UserMarketFilterStatus.Active,
@@ -308,7 +352,11 @@ describe('UsersService', () => {
       queryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
       jest
         .spyOn(marketsRepository, 'createQueryBuilder')
-        .mockReturnValue(queryBuilder as any);
+        .mockReturnValue(
+          queryBuilder as any as ReturnType<
+            typeof marketsRepository.createQueryBuilder
+          >,
+        );
 
       await service.findMarketsByAddress(mockUser.stellar_address, {
         status: UserMarketFilterStatus.Resolved,
@@ -324,7 +372,11 @@ describe('UsersService', () => {
       queryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
       jest
         .spyOn(marketsRepository, 'createQueryBuilder')
-        .mockReturnValue(queryBuilder as any);
+        .mockReturnValue(
+          queryBuilder as any as ReturnType<
+            typeof marketsRepository.createQueryBuilder
+          >,
+        );
 
       await service.findMarketsByAddress(mockUser.stellar_address, {
         status: UserMarketFilterStatus.Cancelled,
@@ -340,7 +392,11 @@ describe('UsersService', () => {
       queryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
       jest
         .spyOn(marketsRepository, 'createQueryBuilder')
-        .mockReturnValue(queryBuilder as any);
+        .mockReturnValue(
+          queryBuilder as any as ReturnType<
+            typeof marketsRepository.createQueryBuilder
+          >,
+        );
 
       await service.findMarketsByAddress(mockUser.stellar_address, {
         sort_by: UserMarketsSortBy.ParticipantCount,

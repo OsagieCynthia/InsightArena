@@ -99,7 +99,71 @@ soroban contract deploy \
   --network testnet
 ```
 
-## 8) Links to Related Docs
+## 8) Smoke Testing on Testnet
+
+The smoke test script validates a full end-to-end flow on Stellar Testnet without requiring the frontend. It covers:
+
+1. **Fund test wallets** via Friendbot
+2. **Build contract** WASM artifact
+3. **Deploy contract** to testnet
+4. **Initialize contract** with admin and config
+5. **Create market** with YES/NO outcomes
+6. **Submit predictions** from two users with different outcomes
+7. **Resolve market** via oracle with winning outcome
+8. **Claim payouts** for winning predictions
+9. **Verify final balances** match expected amounts
+
+### Running Smoke Tests
+
+```bash
+# From contract/ directory
+make smoke-test
+
+# Or manually with custom network settings
+ADMIN_SECRET=<your-secret> \
+USER1_SECRET=<user1-secret> \
+USER2_SECRET=<user2-secret> \
+bash scripts/smoke_test.sh
+```
+
+### Prerequisites
+
+- Soroban CLI installed and configured
+- Funded testnet account (admin identity)
+- Network connectivity to Stellar Testnet RPC
+
+### Output
+
+The script outputs clear ✅ PASS or ❌ FAIL messages at each step:
+
+```
+✅ PASS: Test wallets funded
+✅ PASS: Contract built successfully
+✅ PASS: Contract deployed: CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4
+✅ PASS: Contract initialized
+✅ PASS: Market created: market_id_123
+✅ PASS: User 1 prediction submitted (YES, 1000000 stroops)
+✅ PASS: User 2 prediction submitted (NO, 500000 stroops)
+✅ PASS: Market resolved (outcome: YES)
+✅ PASS: User 1 payout claimed: 1400000
+✅ PASS: User 1 balance: 1400000 stroops
+✅ PASS: User 2 balance: 0 stroops
+🎉 Smoke test PASSED - All steps completed successfully!
+```
+
+## 9) Build Targets
+
+Use `make` to run common tasks:
+
+```bash
+make build       # Build contract WASM
+make test        # Run unit tests
+make smoke-test  # Run testnet smoke tests
+make clean       # Clean build artifacts
+make help        # Show available targets
+```
+
+## 10) Links to Related Docs
 - [Repository contribution guide](../backend/.github/CONTRIBUTING.md)
 - [Contract security audit notes](./SECURITY_AUDIT.md)
 - [Contract storage schema notes](./STORAGE_SCHEMA.md)

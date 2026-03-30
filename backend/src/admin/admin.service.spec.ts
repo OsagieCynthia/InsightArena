@@ -8,6 +8,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { ActivityLog } from '../analytics/entities/activity-log.entity';
+import { Role } from '../common/enums/role.enum';
 import { Competition } from '../competitions/entities/competition.entity';
 import { Comment } from '../markets/entities/comment.entity';
 import { Market } from '../markets/entities/market.entity';
@@ -267,7 +268,7 @@ describe('AdminService.featureMarket', () => {
     const featuredMarket = {
       ...market,
       is_featured: true,
-      featured_at: expect.any(Date),
+      featured_at: new Date(),
     };
 
     marketsRepo.findOne.mockResolvedValue(market);
@@ -291,6 +292,7 @@ describe('AdminService.featureMarket', () => {
     );
     expect(result.is_featured).toBe(true);
     expect(result.featured_at).toBeInstanceOf(Date);
+    expect(result.featured_at).not.toBeNull();
   });
 });
 
@@ -378,5 +380,82 @@ describe('AdminService.unfeatureMarket', () => {
     );
     expect(result.is_featured).toBe(false);
     expect(result.featured_at).toBeNull();
+  });
+});
+
+describe('AdminService.updateUserRole', () => {
+  let service: AdminService;
+  let usersRepo: ReturnType<typeof mockRepo>;
+  let analyticsService: jest.Mocked<Pick<AnalyticsService, 'logActivity'>>;
+
+  const adminId = 'admin-1';
+
+  beforeEach(async () => {
+    usersRepo = mockRepo();
+    analyticsService = { logActivity: jest.fn().mockResolvedValue({}) };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        AdminService,
+        { provide: getRepositoryToken(User), useValue: usersRepo },
+        { provide: getRepositoryToken(Market), useValue: mockRepo() },
+        { provide: getRepositoryToken(Comment), useValue: mockRepo() },
+        { provide: getRepositoryToken(Prediction), useValue: mockRepo() },
+        { provide: getRepositoryToken(Competition), useValue: mockRepo() },
+        { provide: getRepositoryToken(ActivityLog), useValue: mockRepo() },
+        { provide: AnalyticsService, useValue: analyticsService },
+        {
+          provide: NotificationsService,
+          useValue: { create: jest.fn() },
+        },
+        {
+          provide: SorobanService,
+          useValue: { resolveMarket: jest.fn() },
+        },
+      ],
+    }).compile();
+
+    service = module.get<AdminService>(AdminService);
+  });
+
+  it('should update user role from user to admin', async () => {
+    const user = {
+      id: 'user-1',
+      role: 'user',
+    } as User;
+
+    usersRepo.findOne.mockResolvedValue(user);
+    usersRepo.save.mockResolvedValue({ ...user, role: Role.Admin });
+
+    const result = await service.updateUserRole(
+      'user-1',
+      { role: Role.Admin },
+      adminId,
+    );
+
+    expect(result.role).toBe(Role.Admin);
+    expect(analyticsService.logActivity).toHaveBeenCalledWith(
+      adminId,
+      'USER_ROLE_CHANGED',
+      expect.objectContaining({
+        target_user_id: 'user-1',
+        previous_role: 'user',
+        new_role: Role.Admin,
+      }),
+    );
+  });
+
+  it('should throw BadRequestException when admin tries to change own role', async () => {
+    await expect(
+      service.updateUserRole(adminId, { role: Role.User }, adminId),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('should throw NotFoundException when user does not exist', async () => {
+    usersRepo.findOne.mockResolvedValue(null);
+
+    await expect(
+      service.updateUserRole('non-existent', { role: Role.Admin }, adminId),
+    ).rejects.toThrow(NotFoundException);
   });
 });

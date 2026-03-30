@@ -143,10 +143,9 @@ fn expected_reward_payouts(
     let variable_pool = reward_pool - fixed_allocated;
     let mut distributed = 0_i128;
     let last_index = variable_entries.len().saturating_sub(1);
-    let mut index = 0_u32;
 
-    for entry in variable_entries.iter() {
-        let amount = if index == last_index {
+    for (index, entry) in variable_entries.iter().enumerate() {
+        let amount = if index == last_index as usize {
             variable_pool - distributed
         } else {
             variable_pool * entry.points as i128 / total_points as i128
@@ -158,7 +157,6 @@ fn expected_reward_payouts(
             user: entry.user.clone(),
             amount,
         });
-        index += 1;
     }
 
     payouts
@@ -190,6 +188,7 @@ fn default_market_params(env: &Env) -> CreateMarketParams {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn settle_winning_market(
     env: &Env,
     client: &InsightArenaContractClient<'_>,
@@ -453,4 +452,75 @@ fn test_season_transition_preserves_data() {
 
     let snapshot_s2 = client.get_leaderboard(&season2_id);
     assert_eq!(snapshot_s2.entries.len(), 0);
+}
+
+#[test]
+fn test_multiple_seasons_concurrent_creation() {
+    // Test that multiple seasons can be created with non-overlapping time ranges
+    let env = Env::default();
+    let (client, xlm_token, admin, _oracle) = deploy(&env);
+
+    fund(&env, &xlm_token, &admin, 500_000_000);
+    approve_reward_pool(&env, &xlm_token, &admin, &client.address, 300_000_000);
+
+    // Create three seasons with different time ranges
+    let season1_id = client.create_season(&admin, &100, &200, &100_000_000);
+    let season2_id = client.create_season(&admin, &300, &400, &100_000_000);
+    let season3_id = client.create_season(&admin, &500, &600, &100_000_000);
+
+    assert_eq!(season1_id, 1);
+    assert_eq!(season2_id, 2);
+    assert_eq!(season3_id, 3);
+
+    // Verify each season is active only in its time window
+    env.ledger().set_timestamp(150);
+    let active = client.get_active_season().unwrap();
+    assert_eq!(active.season_id, season1_id);
+
+    env.ledger().set_timestamp(350);
+    let active = client.get_active_season().unwrap();
+    assert_eq!(active.season_id, season2_id);
+
+    env.ledger().set_timestamp(550);
+    let active = client.get_active_season().unwrap();
+    assert_eq!(active.season_id, season3_id);
+
+    // Verify no active season outside time windows
+    env.ledger().set_timestamp(50);
+    assert!(client.get_active_season().is_none());
+
+    env.ledger().set_timestamp(250);
+    assert!(client.get_active_season().is_none());
+}
+
+#[test]
+fn test_season_leaderboard_update_validation() {
+    // Test that leaderboard updates handle large entry sets correctly
+    let env = Env::default();
+    let (client, xlm_token, admin, _oracle) = deploy(&env);
+
+    fund(&env, &xlm_token, &admin, 200_000_000);
+    approve_reward_pool(&env, &xlm_token, &admin, &client.address, 100_000_000);
+
+    let season_id = client.create_season(&admin, &10, &100, &100_000_000);
+
+    // Create a large set of valid entries
+    let mut large_entries = Vec::new(&env);
+    for i in 1..=20 {
+        large_entries.push_back(LeaderboardEntry {
+            rank: i,
+            user: Address::generate(&env),
+            points: (21 - i) * 10, // Descending points
+            correct_predictions: (21 - i) * 2,
+            total_predictions: (21 - i) * 3,
+        });
+    }
+
+    env.ledger().set_timestamp(50);
+    client.update_leaderboard(&admin, &season_id, &large_entries);
+
+    let snapshot = client.get_leaderboard(&season_id);
+    assert_eq!(snapshot.entries.len(), 20);
+    assert_eq!(snapshot.entries.get(0).unwrap().rank, 1);
+    assert_eq!(snapshot.entries.get(19).unwrap().rank, 20);
 }

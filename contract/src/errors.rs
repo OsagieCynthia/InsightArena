@@ -128,4 +128,8 @@ pub enum InsightArenaError {
     /// A supplied argument fails basic validation that is not covered by a more
     /// specific error code (e.g. empty strings, zero-length outcome lists).
     InvalidInput = 102,
+    
+    // ── Conditional Markets ───────────────────────────────────────────────────
+    /// The maximum allowed depth for nested conditional markets has been exceeded.
+    ConditionalDepthExceeded = 103,
 }
