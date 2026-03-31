@@ -9,9 +9,10 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { ActivityLog } from '../analytics/entities/activity-log.entity';
 import { Role } from '../common/enums/role.enum';
-import { Competition } from '../competitions/entities/competition.entity';
-import { Comment } from '../markets/entities/comment.entity';
 import { CompetitionParticipant } from '../competitions/entities/competition-participant.entity';
+import { Competition } from '../competitions/entities/competition.entity';
+import { FlagsService } from '../flags/flags.service';
+import { Comment } from '../markets/entities/comment.entity';
 import { Market } from '../markets/entities/market.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Prediction } from '../predictions/entities/prediction.entity';
@@ -86,6 +87,13 @@ describe('AdminService.adminResolveMarket', () => {
         { provide: AnalyticsService, useValue: analyticsService },
         { provide: NotificationsService, useValue: notificationsService },
         { provide: SorobanService, useValue: sorobanService },
+        {
+          provide: FlagsService,
+          useValue: {
+            listFlags: jest.fn(),
+            resolveFlag: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -257,6 +265,13 @@ describe('AdminService.featureMarket', () => {
         { provide: AnalyticsService, useValue: analyticsService },
         { provide: NotificationsService, useValue: { create: jest.fn() } },
         { provide: SorobanService, useValue: { resolveMarket: jest.fn() } },
+        {
+          provide: FlagsService,
+          useValue: {
+            listFlags: jest.fn(),
+            resolveFlag: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -349,6 +364,13 @@ describe('AdminService.unfeatureMarket', () => {
         { provide: AnalyticsService, useValue: analyticsService },
         { provide: NotificationsService, useValue: { create: jest.fn() } },
         { provide: SorobanService, useValue: { resolveMarket: jest.fn() } },
+        {
+          provide: FlagsService,
+          useValue: {
+            listFlags: jest.fn(),
+            resolveFlag: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -437,6 +459,13 @@ describe('AdminService.updateUserRole', () => {
           useValue: {
             resolveMarket: jest.fn(),
             refundCompetitionParticipant: jest.fn(),
+          },
+        },
+        {
+          provide: FlagsService,
+          useValue: {
+            listFlags: jest.fn(),
+            resolveFlag: jest.fn(),
           },
         },
       ],
@@ -530,6 +559,13 @@ describe('AdminService.adminCancelCompetition', () => {
         { provide: AnalyticsService, useValue: analyticsService },
         { provide: NotificationsService, useValue: notificationsService },
         { provide: SorobanService, useValue: sorobanService },
+        {
+          provide: FlagsService,
+          useValue: {
+            listFlags: jest.fn(),
+            resolveFlag: jest.fn(),
+          },
+        },
       ],
     }).compile();
 

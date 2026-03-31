@@ -7,18 +7,21 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
-import { User } from '../users/entities/user.entity';
-import { Market } from '../markets/entities/market.entity';
-import { Comment } from '../markets/entities/comment.entity';
-import { Prediction } from '../predictions/entities/prediction.entity';
-import { Competition } from '../competitions/entities/competition.entity';
-import { CompetitionParticipant } from '../competitions/entities/competition-participant.entity';
-import { ActivityLog } from '../analytics/entities/activity-log.entity';
+import { Between, Repository } from 'typeorm';
 import { AnalyticsService } from '../analytics/analytics.service';
+import { ActivityLog } from '../analytics/entities/activity-log.entity';
+import { CompetitionParticipant } from '../competitions/entities/competition-participant.entity';
+import { Competition } from '../competitions/entities/competition.entity';
+import { ListFlagsQueryDto } from '../flags/dto/list-flags-query.dto';
+import { ResolveFlagDto } from '../flags/dto/resolve-flag.dto';
+import { FlagsService } from '../flags/flags.service';
+import { Comment } from '../markets/entities/comment.entity';
+import { Market } from '../markets/entities/market.entity';
 import { NotificationType } from '../notifications/entities/notification.entity';
 import { NotificationsService } from '../notifications/notifications.service';
+import { Prediction } from '../predictions/entities/prediction.entity';
 import { SorobanService } from '../soroban/soroban.service';
+import { User } from '../users/entities/user.entity';
 import { ActivityLogQueryDto } from './dto/activity-log-query.dto';
 import { ListUsersQueryDto } from './dto/list-users-query.dto';
 import {
@@ -52,6 +55,7 @@ export class AdminService {
     private readonly analyticsService: AnalyticsService,
     private readonly notificationsService: NotificationsService,
     private readonly sorobanService: SorobanService,
+    private readonly flagsService: FlagsService,
   ) {}
 
   async getStats(): Promise<StatsResponseDto> {
@@ -245,6 +249,18 @@ export class AdminService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  async listFlags(query: ListFlagsQueryDto) {
+    return this.flagsService.listFlags(query);
+  }
+
+  async resolveFlag(
+    flagId: string,
+    resolveFlagDto: ResolveFlagDto,
+    adminId: string,
+  ) {
+    return this.flagsService.resolveFlag(flagId, resolveFlagDto, adminId);
   }
 
   async adminResolveMarket(
