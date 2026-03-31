@@ -63,7 +63,9 @@ describe('AdminService.adminResolveMarket', () => {
     predictionsRepo = mockRepo();
     sorobanService = {
       resolveMarket: jest.fn().mockResolvedValue({}),
-      refundCompetitionParticipant: jest.fn().mockResolvedValue({ tx_hash: '1' }),
+      refundCompetitionParticipant: jest
+        .fn()
+        .mockResolvedValue({ tx_hash: '1' }),
     };
     notificationsService = { create: jest.fn().mockResolvedValue({}) };
     analyticsService = { logActivity: jest.fn().mockResolvedValue({}) };
@@ -504,7 +506,9 @@ describe('AdminService.adminCancelCompetition', () => {
     analyticsService = { logActivity: jest.fn().mockResolvedValue({}) };
     sorobanService = {
       resolveMarket: jest.fn().mockResolvedValue({}),
-      refundCompetitionParticipant: jest.fn().mockResolvedValue({ tx_hash: '1' }),
+      refundCompetitionParticipant: jest
+        .fn()
+        .mockResolvedValue({ tx_hash: '1' }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -514,7 +518,10 @@ describe('AdminService.adminCancelCompetition', () => {
         { provide: getRepositoryToken(Market), useValue: mockRepo() },
         { provide: getRepositoryToken(Comment), useValue: mockRepo() },
         { provide: getRepositoryToken(Prediction), useValue: mockRepo() },
-        { provide: getRepositoryToken(Competition), useValue: competitionsRepo },
+        {
+          provide: getRepositoryToken(Competition),
+          useValue: competitionsRepo,
+        },
         {
           provide: getRepositoryToken(CompetitionParticipant),
           useValue: participantsRepo,
@@ -587,7 +594,9 @@ describe('AdminService.adminCancelCompetition', () => {
 
     competitionsRepo.findOne.mockResolvedValue(competition);
     participantsRepo.find.mockResolvedValue(participants);
-    competitionsRepo.save.mockImplementation(async (value) => value);
+    competitionsRepo.save.mockImplementation((value: Competition) =>
+      Promise.resolve(value),
+    );
 
     const result = await service.adminCancelCompetition('comp-1', adminId);
 
@@ -607,7 +616,10 @@ describe('AdminService.adminCancelCompetition', () => {
     expect(analyticsService.logActivity).toHaveBeenCalledWith(
       adminId,
       'COMPETITION_CANCELLED_BY_ADMIN',
-      expect.objectContaining({ competition_id: 'comp-1', refunds_initiated: true }),
+      expect.objectContaining({
+        competition_id: 'comp-1',
+        refunds_initiated: true,
+      }),
     );
     expect(result.is_cancelled).toBe(true);
   });
@@ -630,7 +642,9 @@ describe('AdminService.adminCancelCompetition', () => {
 
     competitionsRepo.findOne.mockResolvedValue(competition);
     participantsRepo.find.mockResolvedValue(participants);
-    competitionsRepo.save.mockImplementation(async (value) => value);
+    competitionsRepo.save.mockImplementation((value: Competition) =>
+      Promise.resolve(value),
+    );
 
     await service.adminCancelCompetition('comp-1', adminId);
 

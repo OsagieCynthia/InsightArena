@@ -404,7 +404,8 @@ export class AdminService {
     }
 
     competition.is_cancelled = true;
-    const savedCompetition = await this.competitionsRepository.save(competition);
+    const savedCompetition =
+      await this.competitionsRepository.save(competition);
 
     await Promise.all(
       participants.map((participant) =>
@@ -413,9 +414,7 @@ export class AdminService {
           NotificationType.System,
           'Competition Cancelled',
           `The competition "${competition.title}" has been cancelled by an administrator.${
-            shouldRefund
-              ? ' Any applicable refunds have been initiated.'
-              : ''
+            shouldRefund ? ' Any applicable refunds have been initiated.' : ''
           }`,
           {
             competition_id: competition.id,
