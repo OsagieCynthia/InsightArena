@@ -1,32 +1,32 @@
-import { Card, CardContent } from '@/component/ui/card';
-import { motion } from 'framer-motion';
+import { Card, CardContent } from "@/component/ui/card";
+import { motion } from "framer-motion";
 import {
   FaFileContract,
   FaGlobe,
   FaLock,
   FaShieldHalved,
-} from 'react-icons/fa6';
+} from "react-icons/fa6";
 
 const features = [
   {
     icon: FaLock,
-    title: 'On-Chain Escrow',
-    body: 'All stakes are locked in transparent Stellar smart contracts ensuring solvency.',
+    title: "On-Chain Escrow",
+    body: "All stakes are locked in transparent Stellar smart contracts ensuring solvency.",
   },
   {
     icon: FaShieldHalved,
-    title: 'Immutable Records',
-    body: 'Your predictions, wins, and losses are permanently logged on the Stellar ledger.',
+    title: "Immutable Records",
+    body: "Your predictions, wins, and losses are permanently logged on the Stellar ledger.",
   },
   {
     icon: FaFileContract,
-    title: 'Smart Contract Security',
-    body: 'Audited Rust (Soroban) smart contracts govern all protocol logic and mechanics.',
+    title: "Smart Contract Security",
+    body: "Audited Rust (Soroban) smart contracts govern all protocol logic and mechanics.",
   },
   {
     icon: FaGlobe,
-    title: 'Public Verification',
-    body: 'Anyone can independently verify market resolution and payout distribution logic.',
+    title: "Public Verification",
+    body: "Anyone can independently verify market resolution and payout distribution logic.",
   },
 ];
 
@@ -34,7 +34,6 @@ export default function TransparentGrid() {
   return (
     <section
       className="w-full py-20 px-6"
-      style={{ background: '#0d1229' }}
       aria-labelledby="transparent-grid-title"
     >
       <div className="max-w-5xl mx-auto">
@@ -59,9 +58,9 @@ export default function TransparentGrid() {
         {/* 3×2 grid */}
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: '1rem',
+            display: "grid",
+            gridTemplateColumns: "repeat(2, 1fr)",
+            gap: "1rem",
           }}
           role="list"
           id="transparent-grid-title"
