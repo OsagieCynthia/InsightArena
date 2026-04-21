@@ -2,8 +2,9 @@ use soroban_sdk::{contracttype, symbol_short, Address, Env, Symbol, Vec};
 
 use crate::config;
 use crate::errors::InsightArenaError;
+use crate::market;
 use crate::storage_types::DataKey;
-use crate::{oracle, Config};
+use crate::Config;
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -188,7 +189,7 @@ pub fn execute_proposal(
             symbol_short!("fee")
         }
         ProposalType::UpdateOracle(addr) => {
-            oracle::update_oracle_from_governance(env, addr)?;
+            market::update_oracle_from_governance(env, addr)?;
             symbol_short!("oracle")
         }
         ProposalType::UpdateMinStake(amount) => {

@@ -1,8 +1,6 @@
 #![no_std]
 #![allow(non_snake_case)]
 
-pub mod analytics;
-pub mod conditional;
 pub mod config;
 pub mod dispute;
 pub mod errors;
@@ -10,25 +8,21 @@ pub mod escrow;
 // pub mod events;
 pub mod governance;
 pub mod invite;
-pub mod leaderboard;
 pub mod liquidity;
 pub mod market;
-pub mod oracle;
 pub mod prediction;
 pub mod reputation;
 pub mod season;
-pub mod security;
 pub mod storage_types;
-pub mod ttl;
 
 pub use crate::config::Config;
 pub use crate::errors::InsightArenaError;
 pub use crate::governance::{Proposal, ProposalType};
-pub use crate::liquidity::{calculate_lp_tokens, calculate_liquidity_value, calculate_swap_output};
+pub use crate::liquidity::{calculate_liquidity_value, calculate_lp_tokens, calculate_swap_output};
 pub use crate::market::CreateMarketParams;
 pub use crate::storage_types::{
-    CreatorStats, DataKey, InviteCode, LeaderboardEntry, LeaderboardSnapshot, Market, MarketStats,
-    PlatformStats, Prediction, Season, UserProfile, LiquidityPool, LPPosition, SwapRecord,
+    CreatorStats, DataKey, InviteCode, LPPosition, LeaderboardEntry, LeaderboardSnapshot,
+    LiquidityPool, Market, MarketStats, PlatformStats, Prediction, Season, SwapRecord, UserProfile,
 };
 
 use soroban_sdk::{contract, contractimpl, Address, Env, Symbol, Vec};
@@ -59,7 +53,7 @@ impl InsightArenaContract {
         market_id: u64,
         resolved_outcome: Symbol,
     ) -> Result<(), InsightArenaError> {
-        oracle::resolve_market(env, oracle, market_id, resolved_outcome)
+        market::resolve_market(env, oracle, market_id, resolved_outcome)
     }
 
     // ── Config read ───────────────────────────────────────────────────────────
@@ -183,7 +177,7 @@ impl InsightArenaContract {
         required_outcome: Symbol,
         params: CreateMarketParams,
     ) -> Result<u64, InsightArenaError> {
-        conditional::create_conditional_market(&env, creator, parent_market_id, required_outcome, params)
+        market::create_conditional_market(&env, creator, parent_market_id, required_outcome, params)
     }
 
     // ── Dispute ───────────────────────────────────────────────────────────────
@@ -422,7 +416,7 @@ impl InsightArenaContract {
     /// Season points for `user` in `season_id` (snapshot if finalized, else live profile when applicable).
     /// Returns `0` for unknown users. Never panics.
     pub fn get_user_season_points(env: Env, user: Address, season_id: u32) -> u32 {
-        leaderboard::get_user_season_points(&env, user, season_id)
+        season::get_user_season_points(&env, user, season_id)
     }
 
     // ── Reputation ────────────────────────────────────────────────────────────
@@ -439,7 +433,7 @@ impl InsightArenaContract {
 
     /// Return aggregated stats for a single market.
     pub fn get_market_stats(env: Env, market_id: u64) -> Result<MarketStats, InsightArenaError> {
-        analytics::get_market_stats(env, market_id)
+        market::get_market_stats(env, market_id)
     }
 
     /// Return per-outcome stake totals sorted descending by stake.
@@ -447,17 +441,17 @@ impl InsightArenaContract {
         env: Env,
         market_id: u64,
     ) -> Result<Vec<(Symbol, i128)>, InsightArenaError> {
-        analytics::get_outcome_distribution(env, market_id)
+        market::get_outcome_distribution(env, market_id)
     }
 
     /// Return the stored `UserProfile` for a given address.
     pub fn get_user_stats(env: Env, user: Address) -> Result<UserProfile, InsightArenaError> {
-        analytics::get_user_stats(env, user)
+        market::get_user_stats(env, user)
     }
 
     /// Return platform-wide aggregated stats using cached counters.
     pub fn get_platform_stats(env: Env) -> PlatformStats {
-        analytics::get_platform_stats(env)
+        market::get_platform_stats(env)
     }
 
     // ── Liquidity Pool / AMM ──────────────────────────────────────────────────
@@ -521,11 +515,3 @@ impl InsightArenaContract {
         liquidity::get_lp_position_public(&env, provider, market_id)
     }
 }
-
-// ── Tests ─────────────────────────────────────────────────────────────────────
-
-#[cfg(test)]
-mod season_tests;
-
-#[cfg(test)]
-mod prediction_tests;

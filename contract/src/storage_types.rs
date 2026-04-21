@@ -66,11 +66,11 @@ pub enum DataKey {
     PoolVolume(u64),
 
     // Conditional Market keys
-    ConditionalMarket(u64),                // market_id -> ConditionalMarket
-    ConditionalChildren(u64),              // parent_market_id -> Vec<u64>
-    ConditionalParent(u64),                // market_id -> u64 (parent_market_id)
-    ConditionalChain(u64),                 // market_id -> ConditionalChain
-    ConditionalDepth(u64),                 // market_id -> u32
+    ConditionalMarket(u64),   // market_id -> ConditionalMarket
+    ConditionalChildren(u64), // parent_market_id -> Vec<u64>
+    ConditionalParent(u64),   // market_id -> u64 (parent_market_id)
+    ConditionalChain(u64),    // market_id -> ConditionalChain
+    ConditionalDepth(u64),    // market_id -> u32
 }
 
 #[contracttype]
@@ -270,10 +270,7 @@ impl LiquidityPool {
         fee_bps: u32,
         created_at: u64,
     ) -> Self {
-        let total_liquidity = initial_reserves
-            .values()
-            .iter()
-            .sum::<i128>();
+        let total_liquidity = initial_reserves.values().iter().sum::<i128>();
 
         Self {
             market_id,

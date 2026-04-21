@@ -5,10 +5,9 @@ use crate::errors::InsightArenaError;
 use crate::escrow;
 use crate::market;
 use crate::storage_types::{DataKey, Dispute};
-use crate::ttl;
 
 fn bump_dispute(env: &Env, market_id: u64) {
-    ttl::extend_market_ttl(env, market_id);
+    config::extend_market_ttl(env, market_id);
     env.storage().persistent().extend_ttl(
         &DataKey::Dispute(market_id),
         config::PERSISTENT_THRESHOLD,
@@ -110,7 +109,7 @@ pub fn resolve_dispute(
         env.storage()
             .persistent()
             .set(&DataKey::Market(market_id), &market);
-        ttl::extend_market_ttl(&env, market_id);
+        config::extend_market_ttl(&env, market_id);
     } else {
         // Forfeit bond to treasury (accounting balance) while funds remain in escrow.
         escrow::add_to_treasury_balance(&env, dispute.bond);

@@ -12,7 +12,7 @@ import Feature from "@/component/Homepage/Feature";
 import ComparisonSection from "@/component/Homepage/ComparisonSection";
 import TransparentGrid from "@/component/Homepage/Transparent";
 import StatisticsSection from "@/component/Homepage/StatisticsSection";
-import PageBackground from "@/component/PageBackground";
+
 
 export default function Home() {
   return (

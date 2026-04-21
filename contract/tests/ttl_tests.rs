@@ -1,5 +1,5 @@
+use insightarena_contract::config::{LEDGER_BUMP_MARKET, LEDGER_BUMP_PREDICTION_CLAIMED};
 use insightarena_contract::storage_types::DataKey;
-use insightarena_contract::ttl::{LEDGER_BUMP_MARKET, LEDGER_BUMP_PREDICTION_CLAIMED};
 use insightarena_contract::{InsightArenaContract, InsightArenaContractClient};
 use soroban_sdk::testutils::{
     storage::{Persistent as _, Temporary as _},

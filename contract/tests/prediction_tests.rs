@@ -2,8 +2,8 @@ use soroban_sdk::testutils::{Address as _, Ledger};
 use soroban_sdk::token::StellarAssetClient;
 use soroban_sdk::{symbol_short, vec, Address, Env, String, Symbol};
 
-use crate::market::CreateMarketParams;
-use crate::{InsightArenaContract, InsightArenaContractClient, InsightArenaError};
+use insightarena_contract::market::CreateMarketParams;
+use insightarena_contract::{InsightArenaContract, InsightArenaContractClient, InsightArenaError};
 
 // ── Test helpers ──────────────────────────────────────────────────────────
 

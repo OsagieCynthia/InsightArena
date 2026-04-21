@@ -4,7 +4,7 @@ use crate::config::{self, PERSISTENT_BUMP, PERSISTENT_THRESHOLD};
 use crate::errors::InsightArenaError;
 use crate::escrow;
 use crate::market;
-use crate::storage_types::{DataKey, LiquidityPool, LPPosition, SwapRecord};
+use crate::storage_types::{DataKey, LPPosition, LiquidityPool, SwapRecord};
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -110,9 +110,10 @@ fn save_pool(env: &Env, pool: &LiquidityPool) {
 
 fn save_lp_position(env: &Env, position: &LPPosition) {
     bump_lp_position(env, position.market_id, &position.provider);
-    env.storage()
-        .persistent()
-        .set(&DataKey::LPPosition(position.market_id, position.provider.clone()), position);
+    env.storage().persistent().set(
+        &DataKey::LPPosition(position.market_id, position.provider.clone()),
+        position,
+    );
 }
 
 fn add_provider_to_list(env: &Env, market_id: u64, provider: &Address) {
@@ -217,7 +218,12 @@ pub fn add_liquidity(
         for outcome in mkt.outcome_options.iter() {
             reserves.set(outcome, amount / mkt.outcome_options.len() as i128);
         }
-        let pool = LiquidityPool::new(market_id, reserves, DEFAULT_FEE_BPS, env.ledger().timestamp());
+        let pool = LiquidityPool::new(
+            market_id,
+            reserves,
+            DEFAULT_FEE_BPS,
+            env.ledger().timestamp(),
+        );
         let mut pool = pool;
         pool.lp_token_supply = amount;
         pool.total_liquidity = amount;
@@ -260,7 +266,8 @@ pub fn remove_liquidity(
         return Err(InsightArenaError::InsufficientFunds);
     }
 
-    let withdrawal_amount = calculate_liquidity_value(lp_tokens, pool.lp_token_supply, pool.total_liquidity)?;
+    let withdrawal_amount =
+        calculate_liquidity_value(lp_tokens, pool.lp_token_supply, pool.total_liquidity)?;
 
     pool.lp_token_supply = pool
         .lp_token_supply

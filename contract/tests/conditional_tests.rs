@@ -56,10 +56,7 @@ fn test_create_conditional_market_invalid_parent_fails() {
         &default_params(&env),
     );
 
-    assert!(matches!(
-        result,
-        Err(Ok(InsightArenaError::MarketNotFound))
-    ));
+    assert!(matches!(result, Err(Ok(InsightArenaError::MarketNotFound))));
 }
 
 #[test]
@@ -96,10 +93,7 @@ fn test_create_conditional_market_resolved_parent_fails() {
         &default_params(&env),
     );
 
-    assert!(matches!(
-        result,
-        Err(Ok(InsightArenaError::MarketExpired))
-    ));
+    assert!(matches!(result, Err(Ok(InsightArenaError::MarketExpired))));
 }
 
 #[test]
@@ -122,10 +116,7 @@ fn test_create_conditional_market_invalid_outcome_fails() {
         &default_params(&env),
     );
 
-    assert!(matches!(
-        result,
-        Err(Ok(InsightArenaError::InvalidOutcome))
-    ));
+    assert!(matches!(result, Err(Ok(InsightArenaError::InvalidOutcome))));
 }
 
 #[test]

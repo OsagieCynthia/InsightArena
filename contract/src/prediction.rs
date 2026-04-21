@@ -1,22 +1,20 @@
 use soroban_sdk::{symbol_short, Address, Env, Symbol, Vec};
 
-use crate::analytics;
 use crate::config::{self, PERSISTENT_BUMP, PERSISTENT_THRESHOLD};
 use crate::errors::InsightArenaError;
 use crate::escrow;
-use crate::leaderboard;
+use crate::market;
 use crate::season;
 use crate::storage_types::{DataKey, Market, Prediction, UserProfile};
-use crate::ttl;
 
 // ── TTL helpers ───────────────────────────────────────────────────────────────
 
 fn bump_prediction(env: &Env, market_id: u64, predictor: &Address) {
-    ttl::extend_prediction_ttl(env, market_id, predictor);
+    config::extend_prediction_ttl(env, market_id, predictor);
 }
 
 fn bump_market(env: &Env, market_id: u64) {
-    ttl::extend_market_ttl(env, market_id);
+    config::extend_market_ttl(env, market_id);
 }
 
 fn bump_predictor_list(env: &Env, market_id: u64) {
@@ -28,7 +26,7 @@ fn bump_predictor_list(env: &Env, market_id: u64) {
 }
 
 fn bump_user(env: &Env, address: &Address) {
-    ttl::extend_user_ttl(env, address);
+    config::extend_user_ttl(env, address);
 }
 
 // ── Event emission ────────────────────────────────────────────────────────────
@@ -134,7 +132,7 @@ fn apply_winner_payout(
         .checked_add(1)
         .ok_or(InsightArenaError::Overflow)?;
 
-    let points = leaderboard::calculate_points(
+    let points = season::calculate_points(
         stake_amount,
         profile.correct_predictions,
         profile.total_predictions,
@@ -235,7 +233,7 @@ pub fn submit_prediction(
     escrow::lock_stake(env, &predictor, stake_amount)?;
 
     // ── Track cumulative platform volume ──────────────────────────────────────
-    analytics::add_volume(env, stake_amount);
+    market::add_volume(env, stake_amount);
 
     // ── Store Prediction record ───────────────────────────────────────────────
     let prediction = Prediction::new(
@@ -327,7 +325,7 @@ pub fn get_prediction(
         bump_prediction(env, market_id, &predictor);
     } else if env.storage().temporary().has(&key) {
         // After claim, keep short-lived cleanup TTL.
-        ttl::shorten_prediction_ttl_after_claim(env, market_id, &predictor);
+        config::shorten_prediction_ttl_after_claim(env, market_id, &predictor);
     }
 
     Ok(prediction)
@@ -521,7 +519,7 @@ pub fn claim_payout(
     prediction.payout_amount = net_payout;
     env.storage().persistent().remove(&prediction_key);
     env.storage().temporary().set(&prediction_key, &prediction);
-    ttl::shorten_prediction_ttl_after_claim(env, market_id, &predictor);
+    config::shorten_prediction_ttl_after_claim(env, market_id, &predictor);
 
     let user_key = DataKey::User(predictor.clone());
     let mut profile: UserProfile = env
@@ -540,7 +538,7 @@ pub fn claim_payout(
         .checked_add(1)
         .ok_or(InsightArenaError::Overflow)?;
 
-    let points = leaderboard::calculate_points(
+    let points = season::calculate_points(
         prediction.stake_amount,
         profile.correct_predictions,
         profile.total_predictions,
@@ -669,7 +667,7 @@ pub fn batch_distribute_payouts(
         env.storage()
             .temporary()
             .set(&prediction_key, &stored_prediction);
-        ttl::shorten_prediction_ttl_after_claim(env, market_id, &stored_prediction.predictor);
+        config::shorten_prediction_ttl_after_claim(env, market_id, &stored_prediction.predictor);
 
         apply_winner_payout(
             env,

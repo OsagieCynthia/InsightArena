@@ -1,7 +1,8 @@
+use crate::config;
 use crate::errors::InsightArenaError;
 use crate::market;
 use crate::storage_types::{DataKey, InviteCode};
-use crate::ttl;
+
 use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::{symbol_short, Address, Env, IntoVal, Symbol, Val, Vec};
 
@@ -74,7 +75,7 @@ pub fn generate_invite_code(
     env.storage()
         .persistent()
         .set(&DataKey::InviteCode(code.clone()), &invite_code);
-    ttl::extend_invite_ttl(&env, &code);
+    config::extend_invite_ttl(&env, &code);
 
     // 5. Emit Event
     env.events().publish(
@@ -129,8 +130,8 @@ pub fn redeem_invite_code(
         .checked_add(1)
         .ok_or(InsightArenaError::Overflow)?;
     env.storage().persistent().set(&invite_key, &invite);
-    ttl::extend_invite_ttl(&env, &code);
-    ttl::extend_market_ttl(&env, invite.market_id);
+    config::extend_invite_ttl(&env, &code);
+    config::extend_market_ttl(&env, invite.market_id);
 
     env.events().publish(
         (symbol_short!("invite"), symbol_short!("redeemd")),
@@ -177,7 +178,7 @@ pub fn revoke_invite_code(
 
     invite.is_active = false;
     env.storage().persistent().set(&invite_key, &invite);
-    ttl::extend_invite_ttl(&env, &code);
+    config::extend_invite_ttl(&env, &code);
 
     env.events().publish(
         (symbol_short!("invite"), symbol_short!("revoked")),

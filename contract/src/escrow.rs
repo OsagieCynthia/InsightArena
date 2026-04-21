@@ -2,8 +2,32 @@ use soroban_sdk::{token, Address, Env, Vec};
 
 use crate::config::{self, PERSISTENT_BUMP, PERSISTENT_THRESHOLD};
 use crate::errors::InsightArenaError;
-use crate::security;
 use crate::storage_types::{DataKey, Market, Prediction};
+
+// ── Reentrancy guard (merged from security.rs) ────────────────────────────────
+
+/// Acquire temporary escrow lock. Returns `Paused` error if already locked.
+/// Temporary storage auto-expires per ledger, preventing persistent state leaks.
+pub fn acquire_escrow_lock(env: &Env) -> Result<(), InsightArenaError> {
+    if env.storage().temporary().has(&DataKey::EscrowLock) {
+        return Err(InsightArenaError::Paused);
+    }
+    env.storage().temporary().set(&DataKey::EscrowLock, &true);
+    Ok(())
+}
+
+/// Release temporary escrow lock.
+pub fn release_escrow_lock(env: &Env) {
+    env.storage().temporary().remove(&DataKey::EscrowLock);
+}
+
+#[cfg(test)]
+pub fn test_simulate_reentrant_call(env: &Env) -> Result<(), InsightArenaError> {
+    acquire_escrow_lock(env)?;
+    let result = acquire_escrow_lock(env);
+    release_escrow_lock(env);
+    result
+}
 
 fn bump_treasury(env: &Env) {
     env.storage().persistent().extend_ttl(
@@ -25,10 +49,10 @@ fn bump_treasury(env: &Env) {
 /// Token transfer panics are handled by the Soroban runtime and surface as
 /// contract failures.
 pub fn lock_stake(env: &Env, from: &Address, amount: i128) -> Result<(), InsightArenaError> {
-    security::acquire_escrow_lock(env)?;
+    acquire_escrow_lock(env)?;
 
     if amount <= 0 {
-        security::release_escrow_lock(env);
+        release_escrow_lock(env);
         return Err(InsightArenaError::InvalidInput);
     }
 
@@ -41,7 +65,7 @@ pub fn lock_stake(env: &Env, from: &Address, amount: i128) -> Result<(), Insight
         &amount,
     );
 
-    security::release_escrow_lock(env);
+    release_escrow_lock(env);
     Ok(())
 }
 
@@ -58,10 +82,10 @@ pub fn lock_stake(env: &Env, from: &Address, amount: i128) -> Result<(), Insight
 /// - `EscrowEmpty` when the contract balance cannot cover the refund.
 /// - Propagates any error returned by [`config::get_config`].
 pub fn refund(env: &Env, to: &Address, amount: i128) -> Result<(), InsightArenaError> {
-    security::acquire_escrow_lock(env)?;
+    acquire_escrow_lock(env)?;
 
     if amount <= 0 {
-        security::release_escrow_lock(env);
+        release_escrow_lock(env);
         return Err(InsightArenaError::InvalidInput);
     }
 
@@ -70,13 +94,13 @@ pub fn refund(env: &Env, to: &Address, amount: i128) -> Result<(), InsightArenaE
     let contract = env.current_contract_address();
 
     if client.balance(&contract) < amount {
-        security::release_escrow_lock(env);
+        release_escrow_lock(env);
         return Err(InsightArenaError::EscrowEmpty);
     }
 
     client.transfer(&contract, to, &amount);
 
-    security::release_escrow_lock(env);
+    release_escrow_lock(env);
     Ok(())
 }
 
@@ -85,10 +109,10 @@ pub fn refund(env: &Env, to: &Address, amount: i128) -> Result<(), InsightArenaE
 /// This is semantically distinct from `refund` (used for market cancellation),
 /// but uses the same escrow transfer path from contract balance to recipient.
 pub fn release_payout(env: &Env, to: &Address, amount: i128) -> Result<(), InsightArenaError> {
-    security::acquire_escrow_lock(env)?;
+    acquire_escrow_lock(env)?;
 
     if amount <= 0 {
-        security::release_escrow_lock(env);
+        release_escrow_lock(env);
         return Err(InsightArenaError::InvalidInput);
     }
 
@@ -97,13 +121,13 @@ pub fn release_payout(env: &Env, to: &Address, amount: i128) -> Result<(), Insig
     let contract = env.current_contract_address();
 
     if client.balance(&contract) < amount {
-        security::release_escrow_lock(env);
+        release_escrow_lock(env);
         return Err(InsightArenaError::EscrowEmpty);
     }
 
     client.transfer(&contract, to, &amount);
 
-    security::release_escrow_lock(env);
+    release_escrow_lock(env);
     Ok(())
 }
 
