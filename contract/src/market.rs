@@ -8,7 +8,6 @@ use crate::storage_types::{
     ConditionalMarket, DataKey, Market, MarketStats, PlatformStats, Prediction, UserProfile,
 };
 
-
 // ── Params struct ─────────────────────────────────────────────────────────────
 // Soroban limits contract functions to 10 parameters. Bundling the market
 // creation fields into a single `#[contracttype]` struct keeps the ABI legal
@@ -629,7 +628,10 @@ pub fn create_conditional_market(
         return Err(InsightArenaError::MarketExpired);
     }
 
-    if !parent_market.outcome_options.contains(required_outcome.clone()) {
+    if !parent_market
+        .outcome_options
+        .contains(required_outcome.clone())
+    {
         return Err(InsightArenaError::InvalidOutcome);
     }
 

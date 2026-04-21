@@ -44,7 +44,7 @@ fn test_calculate_swap_output_basic() {
 
     let result = calculate_swap_output(amount_in, reserve_in, reserve_out, fee_bps);
     assert!(result.is_ok());
-    
+
     let amount_out = result.unwrap();
     // Expected: (100 * 1000) / (1000 + 100) = 90.909... then apply 0.3% fee
     // 90 * (10000 - 30) / 10000 = 90 * 0.997 = 89.73
@@ -80,10 +80,10 @@ fn test_calculate_swap_output_price_impact() {
 
     // Small trade - low price impact
     let small_trade = calculate_swap_output(100, reserve_in, reserve_out, fee_bps).unwrap();
-    
+
     // Large trade - high price impact
     let large_trade = calculate_swap_output(5000, reserve_in, reserve_out, fee_bps).unwrap();
-    
+
     // Large trade should have worse rate (less output per input)
     let small_rate = small_trade as f64 / 100.0;
     let large_rate = large_trade as f64 / 5000.0;
@@ -98,12 +98,13 @@ fn test_calculate_swap_output_multiple_consecutive_swaps() {
     let swap_amount = 100_i128;
 
     for _ in 0..5 {
-        let amount_out = calculate_swap_output(swap_amount, reserve_in, reserve_out, fee_bps).unwrap();
-        
+        let amount_out =
+            calculate_swap_output(swap_amount, reserve_in, reserve_out, fee_bps).unwrap();
+
         // Update reserves for next swap
         reserve_in += swap_amount;
         reserve_out -= amount_out;
-        
+
         assert!(reserve_in > 0);
         assert!(reserve_out > 0);
     }
@@ -174,17 +175,17 @@ fn test_price_equal_reserves() {
 fn test_price_after_swap() {
     let reserve_in = 10_000_i128;
     let reserve_out = 10_000_i128;
-    
+
     // First swap
     let amount_out = calculate_swap_output(1000, reserve_in, reserve_out, 0).unwrap();
-    
+
     // Reserves after first swap
     let new_reserve_in = reserve_in + 1000;
     let new_reserve_out = reserve_out - amount_out;
-    
+
     // Second swap should have different rate
     let amount_out_2 = calculate_swap_output(1000, new_reserve_in, new_reserve_out, 0).unwrap();
-    
+
     // Second swap should give less output (price moved)
     assert!(amount_out_2 < amount_out);
 }
@@ -204,16 +205,16 @@ fn test_fee_collection_on_swap() {
     let amount_in = 10_000_i128;
     let reserve_in = 100_000_i128;
     let reserve_out = 100_000_i128;
-    
+
     // With 0.3% fee (30 bps)
     let with_fee = calculate_swap_output(amount_in, reserve_in, reserve_out, 30).unwrap();
-    
+
     // Without fee
     let without_fee = calculate_swap_output(amount_in, reserve_in, reserve_out, 0).unwrap();
-    
+
     // Fee should reduce output
     assert!(with_fee < without_fee);
-    
+
     // Fee should be approximately 0.3% of output
     let fee_amount = without_fee - with_fee;
     let expected_fee = (without_fee * 30) / 10_000;
@@ -230,14 +231,14 @@ fn test_fee_accumulation_over_time() {
     for _ in 0..10 {
         let without_fee = calculate_swap_output(1000, reserve_in, reserve_out, 0).unwrap();
         let with_fee = calculate_swap_output(1000, reserve_in, reserve_out, fee_bps).unwrap();
-        
+
         let fee = without_fee - with_fee;
         total_fees += fee;
-        
+
         reserve_in += 1000;
         reserve_out -= with_fee;
     }
-    
+
     // Total fees should be positive
     assert!(total_fees > 0);
 }
@@ -255,7 +256,7 @@ fn test_overflow_protection_large_amounts() {
 fn test_minimum_liquidity_enforcement() {
     // MIN_LIQUIDITY should be enforced (1000)
     assert_eq!(MIN_LIQUIDITY, 1000);
-    
+
     // Deposits below minimum should be rejected in actual implementation
     // This is a constant check
     assert!(MIN_LIQUIDITY > 0);
@@ -272,7 +273,7 @@ fn test_division_by_zero_protection() {
     // Zero reserves should fail
     let result1 = calculate_swap_output(100, 0, 1000, 30);
     assert_eq!(result1, Err(InsightArenaError::InvalidInput));
-    
+
     let result2 = calculate_swap_output(100, 1000, 0, 30);
     assert_eq!(result2, Err(InsightArenaError::InvalidInput));
 }
@@ -283,14 +284,14 @@ fn test_division_by_zero_protection() {
 fn test_very_large_trades() {
     let reserve_in = 1_000_000_i128;
     let reserve_out = 1_000_000_i128;
-    
+
     // Trade 90% of pool
     let large_amount = 900_000_i128;
     let result = calculate_swap_output(large_amount, reserve_in, reserve_out, 30);
-    
+
     assert!(result.is_ok());
     let amount_out = result.unwrap();
-    
+
     // Should get less than 90% of output reserve due to price impact
     assert!(amount_out < reserve_out * 9 / 10);
 }
@@ -299,11 +300,11 @@ fn test_very_large_trades() {
 fn test_very_small_trades() {
     let reserve_in = 1_000_000_i128;
     let reserve_out = 1_000_000_i128;
-    
+
     // Very small trade
     let small_amount = 1_i128;
     let result = calculate_swap_output(small_amount, reserve_in, reserve_out, 30);
-    
+
     assert!(result.is_ok());
     // Might round to 0 due to integer math
     assert!(result.unwrap() >= 0);
@@ -313,14 +314,14 @@ fn test_very_small_trades() {
 fn test_pool_depletion_protection() {
     let reserve_in = 10_000_i128;
     let reserve_out = 10_000_i128;
-    
+
     // Try to drain entire pool
     let drain_amount = 1_000_000_i128;
     let result = calculate_swap_output(drain_amount, reserve_in, reserve_out, 30);
-    
+
     assert!(result.is_ok());
     let amount_out = result.unwrap();
-    
+
     // Can never get more than reserve_out
     assert!(amount_out < reserve_out);
 }
@@ -331,10 +332,10 @@ fn test_single_outcome_market_edge_case() {
     // This tests the mathematical edge case
     let reserve_in = 10_000_i128;
     let reserve_out = 1_i128; // Nearly depleted
-    
+
     let result = calculate_swap_output(100, reserve_in, reserve_out, 30);
     assert!(result.is_ok());
-    
+
     // Output should be very small
     let amount_out = result.unwrap();
     assert!(amount_out < reserve_out);
@@ -345,19 +346,19 @@ fn test_fee_boundary_values() {
     let amount_in = 10_000_i128;
     let reserve_in = 100_000_i128;
     let reserve_out = 100_000_i128;
-    
+
     // Test with 0% fee
     let zero_fee = calculate_swap_output(amount_in, reserve_in, reserve_out, 0);
     assert!(zero_fee.is_ok());
-    
+
     // Test with 5% fee (500 bps)
     let high_fee = calculate_swap_output(amount_in, reserve_in, reserve_out, 500);
     assert!(high_fee.is_ok());
-    
+
     // Test with 10% fee (1000 bps)
     let very_high_fee = calculate_swap_output(amount_in, reserve_in, reserve_out, 1000);
     assert!(very_high_fee.is_ok());
-    
+
     // Higher fees should give less output
     assert!(zero_fee.unwrap() > high_fee.unwrap());
     assert!(high_fee.unwrap() > very_high_fee.unwrap());
@@ -368,21 +369,21 @@ fn test_constant_product_formula() {
     let reserve_in = 10_000_i128;
     let reserve_out = 10_000_i128;
     let amount_in = 1000_i128;
-    
+
     // Calculate expected output using constant product formula
     // k = reserve_in * reserve_out
     // (reserve_in + amount_in) * (reserve_out - amount_out) = k
     // amount_out = (amount_in * reserve_out) / (reserve_in + amount_in)
-    
+
     let result = calculate_swap_output(amount_in, reserve_in, reserve_out, 0);
     assert!(result.is_ok());
-    
+
     let amount_out = result.unwrap();
-    
+
     // Verify constant product is maintained (approximately)
     let k_before = reserve_in * reserve_out;
     let k_after = (reserve_in + amount_in) * (reserve_out - amount_out);
-    
+
     // Should be approximately equal (allowing for integer rounding)
     let diff = (k_before - k_after).abs();
     assert!(diff < reserve_in); // Difference should be small relative to reserves
@@ -394,20 +395,20 @@ fn test_lp_token_value_preservation() {
     let first_deposit = 10_000_i128;
     let first_lp = calculate_lp_tokens(first_deposit, 0, 0).unwrap();
     assert_eq!(first_lp, first_deposit);
-    
+
     // Second deposit (same amount)
     let second_deposit = 10_000_i128;
     let total_liquidity = first_deposit;
     let total_lp_supply = first_lp;
     let second_lp = calculate_lp_tokens(second_deposit, total_liquidity, total_lp_supply).unwrap();
-    
+
     // Should get same amount of LP tokens
     assert_eq!(second_lp, first_lp);
-    
+
     // Total value should be preserved
     let new_total_liquidity = total_liquidity + second_deposit;
     let new_total_lp = total_lp_supply + second_lp;
-    
+
     // Each LP token should represent same value
     let value_per_lp_before = total_liquidity / total_lp_supply;
     let value_per_lp_after = new_total_liquidity / new_total_lp;
@@ -419,13 +420,13 @@ fn test_slippage_calculation() {
     let reserve_in = 100_000_i128;
     let reserve_out = 100_000_i128;
     let amount_in = 10_000_i128;
-    
+
     // Calculate expected output
     let expected_output = calculate_swap_output(amount_in, reserve_in, reserve_out, 30).unwrap();
-    
+
     // Simulate slippage tolerance (1% = 100 bps)
     let min_output_1_percent = expected_output * 99 / 100;
-    
+
     // Actual output should be above minimum
     assert!(expected_output >= min_output_1_percent);
 }
@@ -443,7 +444,7 @@ fn test_liquidity_module_constants() {
     // Verify all constants are set correctly
     assert_eq!(MIN_LIQUIDITY, 1000);
     assert_eq!(DEFAULT_FEE_BPS, 30);
-    
+
     // Verify constants are reasonable
     assert!(MIN_LIQUIDITY > 0);
     assert!(DEFAULT_FEE_BPS < 10_000); // Fee should be less than 100%
@@ -456,10 +457,10 @@ fn test_swap_output_consistency() {
     let reserve_in = 50_000_i128;
     let reserve_out = 50_000_i128;
     let fee_bps = 30_u32;
-    
+
     let result1 = calculate_swap_output(amount_in, reserve_in, reserve_out, fee_bps);
     let result2 = calculate_swap_output(amount_in, reserve_in, reserve_out, fee_bps);
-    
+
     assert_eq!(result1, result2);
 }
 
@@ -469,10 +470,10 @@ fn test_lp_token_calculation_consistency() {
     let deposit = 5000_i128;
     let liquidity = 10_000_i128;
     let supply = 8_000_i128;
-    
+
     let result1 = calculate_lp_tokens(deposit, liquidity, supply);
     let result2 = calculate_lp_tokens(deposit, liquidity, supply);
-    
+
     assert_eq!(result1, result2);
 }
 

@@ -277,7 +277,7 @@ fn test_reputation_with_high_dispute_count() {
     // Manually verify the reputation calculation with high dispute scenario
     // In a real scenario, disputes would be triggered through the dispute mechanism
     let stats = client.get_creator_stats(&creator);
-    
+
     // With 10 markets created and resolved, no disputes yet
     // Expected: 10/10 * 600 = 600, 0 participation bonus, 0 disputes = 600
     assert_eq!(stats.markets_created, 10);
@@ -292,7 +292,7 @@ fn test_reputation_with_high_dispute_count() {
         dispute_count: 20, // Very high dispute count
         reputation_score: 0,
     };
-    
+
     let reputation = calculate_creator_reputation(&high_dispute_stats);
     // 600 + 100 (50*2 capped at 200) - 200 (20*50 capped at 200) = 500
     assert_eq!(reputation, 500);

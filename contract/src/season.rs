@@ -47,7 +47,11 @@ pub fn calculate_points(stake_amount: i128, correct: u32, total: u32) -> u32 {
     if res < 0 {
         return 0;
     }
-    if res > u32::MAX as i128 { u32::MAX } else { res as u32 }
+    if res > u32::MAX as i128 {
+        u32::MAX
+    } else {
+        res as u32
+    }
 }
 
 /// Returns season points for `user` in `season_id`.

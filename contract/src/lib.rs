@@ -18,11 +18,11 @@ pub mod storage_types;
 pub use crate::config::Config;
 pub use crate::errors::InsightArenaError;
 pub use crate::governance::{Proposal, ProposalType};
-pub use crate::liquidity::{calculate_lp_tokens, calculate_liquidity_value, calculate_swap_output};
+pub use crate::liquidity::{calculate_liquidity_value, calculate_lp_tokens, calculate_swap_output};
 pub use crate::market::CreateMarketParams;
 pub use crate::storage_types::{
-    CreatorStats, DataKey, InviteCode, LeaderboardEntry, LeaderboardSnapshot, Market, MarketStats,
-    PlatformStats, Prediction, Season, UserProfile, LiquidityPool, LPPosition, SwapRecord,
+    CreatorStats, DataKey, InviteCode, LPPosition, LeaderboardEntry, LeaderboardSnapshot,
+    LiquidityPool, Market, MarketStats, PlatformStats, Prediction, Season, SwapRecord, UserProfile,
 };
 
 use soroban_sdk::{contract, contractimpl, Address, Env, Symbol, Vec};

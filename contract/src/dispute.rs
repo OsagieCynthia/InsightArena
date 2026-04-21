@@ -6,7 +6,6 @@ use crate::escrow;
 use crate::market;
 use crate::storage_types::{DataKey, Dispute};
 
-
 fn bump_dispute(env: &Env, market_id: u64) {
     config::extend_market_ttl(env, market_id);
     env.storage().persistent().extend_ttl(
