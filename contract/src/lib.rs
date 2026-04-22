@@ -21,8 +21,9 @@ pub use crate::governance::{Proposal, ProposalType};
 pub use crate::liquidity::{calculate_liquidity_value, calculate_lp_tokens, calculate_swap_output};
 pub use crate::market::CreateMarketParams;
 pub use crate::storage_types::{
-    CreatorStats, DataKey, InviteCode, LPPosition, LeaderboardEntry, LeaderboardSnapshot,
-    LiquidityPool, Market, MarketStats, PlatformStats, Prediction, Season, SwapRecord, UserProfile,
+    ConditionalMarket, CreatorStats, DataKey, InviteCode, LPPosition, LeaderboardEntry,
+    LeaderboardSnapshot, LiquidityPool, Market, MarketStats, PlatformStats, Prediction, Season,
+    SwapRecord, UserProfile,
 };
 
 use soroban_sdk::{contract, contractimpl, Address, Env, Symbol, Vec};
@@ -178,6 +179,14 @@ impl InsightArenaContract {
         params: CreateMarketParams,
     ) -> Result<u64, InsightArenaError> {
         market::create_conditional_market(&env, creator, parent_market_id, required_outcome, params)
+    }
+
+    /// Get all conditional markets (children) for a given parent market.
+    pub fn get_conditional_markets(
+        env: Env,
+        parent_market_id: u64,
+    ) -> Vec<crate::storage_types::ConditionalMarket> {
+        market::get_conditional_markets(&env, parent_market_id)
     }
 
     // ── Dispute ───────────────────────────────────────────────────────────────

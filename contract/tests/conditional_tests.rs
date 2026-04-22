@@ -159,3 +159,116 @@ fn test_create_conditional_market_exceeds_depth_fails() {
         Err(Ok(InsightArenaError::ConditionalDepthExceeded))
     ));
 }
+
+#[test]
+fn test_get_conditional_markets_returns_empty_for_no_children() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = deploy(&env);
+    let creator = Address::generate(&env);
+
+    // Create a parent market with no children
+    let parent_id = client.create_market(&creator, &default_params(&env));
+
+    // Query for children - should return empty vector
+    let children = client.get_conditional_markets(&parent_id);
+
+    assert_eq!(children.len(), 0);
+}
+
+#[test]
+fn test_get_conditional_markets_returns_all_children() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = deploy(&env);
+    let creator = Address::generate(&env);
+
+    // Create a parent market
+    let parent_id = client.create_market(&creator, &default_params(&env));
+
+    // Create multiple conditional markets as children
+    let child1_id = client.create_conditional_market(
+        &creator,
+        &parent_id,
+        &symbol_short!("yes"),
+        &default_params(&env),
+    );
+
+    let child2_id = client.create_conditional_market(
+        &creator,
+        &parent_id,
+        &symbol_short!("no"),
+        &default_params(&env),
+    );
+
+    let child3_id = client.create_conditional_market(
+        &creator,
+        &parent_id,
+        &symbol_short!("yes"),
+        &default_params(&env),
+    );
+
+    // Query for children
+    let children = client.get_conditional_markets(&parent_id);
+
+    // Should return all 3 children
+    assert_eq!(children.len(), 3);
+
+    // Verify the market IDs are correct
+    let child_ids: Vec<u64> = children.iter().map(|c| c.market_id).collect();
+    assert!(child_ids.contains(&child1_id));
+    assert!(child_ids.contains(&child2_id));
+    assert!(child_ids.contains(&child3_id));
+
+    // Verify all have the correct parent
+    for child in children.iter() {
+        assert_eq!(child.parent_market_id, parent_id);
+    }
+}
+
+#[test]
+fn test_get_conditional_markets_returns_correct_required_outcome() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = deploy(&env);
+    let creator = Address::generate(&env);
+
+    // Create a parent market
+    let parent_id = client.create_market(&creator, &default_params(&env));
+
+    // Create conditional markets with different required outcomes
+    let _child1_id = client.create_conditional_market(
+        &creator,
+        &parent_id,
+        &symbol_short!("yes"),
+        &default_params(&env),
+    );
+
+    let _child2_id = client.create_conditional_market(
+        &creator,
+        &parent_id,
+        &symbol_short!("no"),
+        &default_params(&env),
+    );
+
+    // Query for children
+    let children = client.get_conditional_markets(&parent_id);
+
+    assert_eq!(children.len(), 2);
+
+    // Find the child with "yes" outcome
+    let yes_child = children
+        .iter()
+        .find(|c| c.required_outcome == symbol_short!("yes"))
+        .expect("Should find child with 'yes' outcome");
+    assert_eq!(yes_child.required_outcome, symbol_short!("yes"));
+    assert_eq!(yes_child.parent_market_id, parent_id);
+
+    // Find the child with "no" outcome
+    let no_child = children
+        .iter()
+        .find(|c| c.required_outcome == symbol_short!("no"))
+        .expect("Should find child with 'no' outcome");
+    assert_eq!(no_child.required_outcome, symbol_short!("no"));
+    assert_eq!(no_child.parent_market_id, parent_id);
+}

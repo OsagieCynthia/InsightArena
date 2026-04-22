@@ -676,9 +676,44 @@ pub fn create_conditional_market(
     Ok(market_id)
 }
 
+/// Get all conditional markets (children) for a given parent market.
+///
+/// Returns a vector of `ConditionalMarket` structs representing all child markets
+/// that were created with the specified parent market ID. Returns an empty vector
+/// if no children exist.
+///
+/// # Arguments
+/// * `env` - The contract environment
+/// * `parent_market_id` - The market ID to query for children
+///
+/// # Returns
+/// A `Vec<ConditionalMarket>` containing all child markets, or an empty vector if none exist.
+pub fn get_conditional_markets(env: &Env, parent_market_id: u64) -> Vec<ConditionalMarket> {
+    let children_key = DataKey::ConditionalChildren(parent_market_id);
+    let child_ids: Vec<u64> = env
+        .storage()
+        .persistent()
+        .get(&children_key)
+        .unwrap_or_else(|| Vec::new(env));
+
+    let mut results: Vec<ConditionalMarket> = Vec::new(env);
+
+    for child_id in child_ids.iter() {
+        if let Some(conditional_market) = env
+            .storage()
+            .persistent()
+            .get::<DataKey, ConditionalMarket>(&DataKey::ConditionalMarket(child_id))
+        {
+            results.push_back(conditional_market);
+        }
+    }
+
+    results
+}
+
 // TODO: validate_conditional_params
 // TODO: check_conditional_activation / activate / deactivate
-// TODO: get_conditional_markets / get_parent_market / get_conditional_chain
+// TODO: get_parent_market / get_conditional_chain
 // TODO: calculate_conditional_depth / validate_no_circular_dependency
 
 // ── Analytics (merged from analytics.rs) ─────────────────────────────────────
