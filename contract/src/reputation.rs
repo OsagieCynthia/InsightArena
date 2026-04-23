@@ -2,7 +2,8 @@ use soroban_sdk::{Address, Env};
 
 use crate::config::{PERSISTENT_BUMP, PERSISTENT_THRESHOLD};
 use crate::errors::InsightArenaError;
-use crate::storage_types::{CreatorStats, DataKey};
+use crate::storage_types::{CreatorStats, DataKey, CreatorLeaderboardEntry};
+
 
 // ── Storage helpers ───────────────────────────────────────────────────────────
 
@@ -83,6 +84,66 @@ pub fn on_market_resolved(env: &Env, creator: &Address, participant_count: u32) 
 
 pub fn get_creator_stats(env: Env, creator: Address) -> Result<CreatorStats, InsightArenaError> {
     Ok(load_stats(&env, &creator))
+}
+
+pub fn get_top_creators(env: &Env, limit: u32) -> Vec<CreatorLeaderboardEntry> {
+    let mut limit = limit;
+    if limit > 50 {
+        limit = 50;
+    }
+
+    let users: Vec<Address> = env
+        .storage()
+        .persistent()
+        .get(&DataKey::UserList)
+        .unwrap_or_else(|| Vec::new(env));
+
+    let mut creators = Vec::new(env);
+
+    for user in users.iter() {
+        if let Some(stats) = env
+            .storage()
+            .persistent()
+            .get::<DataKey, CreatorStats>(&DataKey::CreatorStats(user.clone()))
+        {
+            if stats.markets_created > 0 {
+                creators.push_back(CreatorLeaderboardEntry {
+                    address: user,
+                    stats,
+                });
+            }
+        }
+    }
+
+    // Sort by reputation_score descending
+    let n = creators.len();
+    for i in 1..n {
+        let mut j = i;
+        while j > 0 {
+            let a = creators.get(j).unwrap().stats.reputation_score;
+            let b = creators.get(j - 1).unwrap().stats.reputation_score;
+            if a > b {
+                let temp_a = creators.get(j).unwrap();
+                let temp_b = creators.get(j - 1).unwrap();
+                creators.set(j, temp_b);
+                creators.set(j - 1, temp_a);
+                j -= 1;
+            } else {
+                break;
+            }
+        }
+    }
+
+    // Truncate to limit
+    if creators.len() > limit {
+        let mut truncated = Vec::new(env);
+        for i in 0..limit {
+            truncated.push_back(creators.get(i).unwrap());
+        }
+        creators = truncated;
+    }
+
+    creators
 }
 
 pub fn reset_creator_stats(env: &Env, admin: Address, creator: Address) -> Result<(), InsightArenaError> {

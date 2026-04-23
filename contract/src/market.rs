@@ -293,6 +293,7 @@ pub fn create_market(
 
     // ── Update creator reputation stats ──────────────────────────────────────
     reputation::on_market_created(env, &creator);
+    crate::season::track_user_profile(env, &creator);
 
     Ok(market_id)
 }
