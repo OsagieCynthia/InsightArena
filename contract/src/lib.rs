@@ -21,9 +21,9 @@ pub use crate::governance::{Proposal, ProposalType};
 pub use crate::liquidity::{calculate_liquidity_value, calculate_lp_tokens, calculate_swap_output};
 pub use crate::market::CreateMarketParams;
 pub use crate::storage_types::{
-    ConditionalChain, ConditionalMarket, CreatorStats, DataKey, InviteCode, LPPosition, LeaderboardEntry,
-    LeaderboardSnapshot, LiquidityPool, Market, MarketStats, PlatformStats, Prediction, Season,
-    SwapRecord, UserProfile,
+    ConditionalChain, ConditionalMarket, CreatorStats, DataKey, Dispute, InviteCode, LPPosition,
+    LeaderboardEntry, LeaderboardSnapshot, LiquidityPool, Market, MarketStats, PlatformStats,
+    Prediction, Season, SwapRecord, UserProfile,
 };
 
 use soroban_sdk::{contract, contractimpl, Address, Env, Symbol, Vec};
@@ -203,6 +203,14 @@ impl InsightArenaContract {
     }
 
     // ── Dispute ───────────────────────────────────────────────────────────────
+
+    /// Return the active dispute for a market. Extends TTL on read.
+    pub fn get_dispute(
+        env: Env,
+        market_id: u64,
+    ) -> Result<crate::storage_types::Dispute, InsightArenaError> {
+        dispute::get_dispute(&env, market_id)
+    }
 
     /// File a dispute within the market's post-resolution dispute window.
     pub fn raise_dispute(
@@ -560,5 +568,14 @@ impl InsightArenaContract {
     /// Extends analytics to expose full swap history of the pool.
     pub fn get_swap_history(env: Env, market_id: u64) -> Vec<SwapRecord> {
         liquidity::get_swap_history(&env, market_id)
+    }
+
+    /// Withdraw accumulated trading fees earned by a liquidity provider.
+    pub fn collect_lp_fees(
+        env: Env,
+        provider: Address,
+        market_id: u64,
+    ) -> Result<i128, InsightArenaError> {
+        liquidity::collect_lp_fees(&env, provider, market_id)
     }
 }

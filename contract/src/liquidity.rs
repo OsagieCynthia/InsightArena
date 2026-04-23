@@ -102,22 +102,21 @@ fn get_lp_position(
 }
 
 fn save_pool(env: &Env, pool: &LiquidityPool) {
-    bump_pool(env, pool.market_id);
     env.storage()
         .persistent()
         .set(&DataKey::LiquidityPool(pool.market_id), pool);
+    bump_pool(env, pool.market_id);
 }
 
 fn save_lp_position(env: &Env, position: &LPPosition) {
-    bump_lp_position(env, position.market_id, &position.provider);
     env.storage().persistent().set(
         &DataKey::LPPosition(position.market_id, position.provider.clone()),
         position,
     );
+    bump_lp_position(env, position.market_id, &position.provider);
 }
 
 fn add_provider_to_list(env: &Env, market_id: u64, provider: &Address) {
-    bump_lp_provider_list(env, market_id);
     let mut providers: Vec<Address> = env
         .storage()
         .persistent()
@@ -130,6 +129,7 @@ fn add_provider_to_list(env: &Env, market_id: u64, provider: &Address) {
             .persistent()
             .set(&DataKey::LPProviderList(market_id), &providers);
     }
+    bump_lp_provider_list(env, market_id);
 }
 
 pub fn calculate_liquidity_value(
@@ -440,6 +440,29 @@ pub fn get_lp_position_public(
     market_id: u64,
 ) -> Result<LPPosition, InsightArenaError> {
     get_lp_position(env, &provider, market_id)
+}
+
+/// Withdraw accumulated trading fees for a liquidity provider
+pub fn collect_lp_fees(
+    env: &Env,
+    provider: Address,
+    market_id: u64,
+) -> Result<i128, InsightArenaError> {
+    provider.require_auth();
+
+    let mut position = get_lp_position(env, &provider, market_id)?;
+
+    if position.fees_earned == 0 {
+        return Err(InsightArenaError::InvalidInput);
+    }
+
+    let fees = position.fees_earned;
+    escrow::refund(env, &provider, fees)?;
+
+    position.fees_earned = 0;
+    save_lp_position(env, &position);
+
+    Ok(fees)
 }
 
 // ── Analytics ─────────────────────────────────────────────────────────────────

@@ -38,6 +38,16 @@ fn emit_dispute_resolved(env: &Env, market_id: u64, admin: &Address, uphold: boo
     );
 }
 
+pub fn get_dispute(env: &Env, market_id: u64) -> Result<Dispute, InsightArenaError> {
+    let dispute: Dispute = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Dispute(market_id))
+        .ok_or(InsightArenaError::DisputeNotFound)?;
+    bump_dispute(env, market_id);
+    Ok(dispute)
+}
+
 pub fn raise_dispute(
     env: Env,
     disputer: Address,

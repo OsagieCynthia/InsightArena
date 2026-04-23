@@ -10,9 +10,12 @@
 //! - Edge cases (zero amounts, single outcome, pool depletion)
 
 use insightarena_contract::liquidity::*;
-use insightarena_contract::{InsightArenaContract, InsightArenaContractClient, InsightArenaError};
+use insightarena_contract::{
+    CreateMarketParams, InsightArenaContract, InsightArenaContractClient, InsightArenaError,
+};
 use soroban_sdk::testutils::Address as _;
-use soroban_sdk::{Address, Env};
+use soroban_sdk::token::{Client as TokenClient, StellarAssetClient};
+use soroban_sdk::{symbol_short, vec, Address, Env, String, Symbol};
 
 // ── Test Helpers ─────────────────────────────────────────────────────────────
 
@@ -649,9 +652,6 @@ fn test_calculate_lp_tokens_multiple_deposits() {
 
 // ── Volume & History Tests (Issues #559, #560) ────────────────────────────────
 
-use insightarena_contract::market::CreateMarketParams;
-use soroban_sdk::{symbol_short, vec, String, Symbol};
-
 fn deploy_with_admin(env: &Env) -> (InsightArenaContractClient<'_>, Address) {
     let id = env.register(InsightArenaContract, ());
     let client = InsightArenaContractClient::new(env, &id);
@@ -706,4 +706,143 @@ fn test_get_swap_history_empty_before_any_swaps() {
     let history = client.get_swap_history(&123);
     assert_eq!(history.len(), 0);
 }
- 
+
+// ── collect_lp_fees Tests (Issue #561) ───────────────────────────────────────
+
+fn deploy_with_token(
+    env: &Env,
+) -> (InsightArenaContractClient<'_>, Address, Address, Address) {
+    let id = env.register(InsightArenaContract, ());
+    let client = InsightArenaContractClient::new(env, &id);
+    let admin = Address::generate(env);
+    let oracle = Address::generate(env);
+    let xlm_token = {
+        let token_admin = Address::generate(env);
+        env.register_stellar_asset_contract_v2(token_admin).address()
+    };
+    env.mock_all_auths();
+    client.initialize(&admin, &oracle, &200_u32, &xlm_token);
+    (client, admin, oracle, xlm_token)
+}
+
+fn lp_market_params(env: &Env) -> CreateMarketParams {
+    let now = env.ledger().timestamp();
+    CreateMarketParams {
+        title: String::from_str(env, "LP fee market"),
+        description: String::from_str(env, "For collect_lp_fees tests"),
+        category: Symbol::new(env, "Sports"),
+        outcomes: vec![env, symbol_short!("yes"), symbol_short!("no")],
+        end_time: now + 1000,
+        resolution_time: now + 2000,
+        dispute_window: 86_400,
+        creator_fee_bps: 0,
+        min_stake: 10_000_000,
+        max_stake: 1_000_000_000,
+        is_public: true,
+    }
+}
+
+#[test]
+fn test_collect_lp_fees_transfers_correct_amount() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (client, _admin, _oracle, xlm_token) = deploy_with_token(&env);
+
+    let creator = Address::generate(&env);
+    let provider = Address::generate(&env);
+    let trader = Address::generate(&env);
+
+    let sa = StellarAssetClient::new(&env, &xlm_token);
+    let token = TokenClient::new(&env, &xlm_token);
+
+    let market_id = client.create_market(&creator, &lp_market_params(&env));
+
+    let liquidity = 100_000_i128;
+    sa.mint(&provider, &liquidity);
+    token.approve(&provider, &client.address, &liquidity, &9999);
+    client.add_liquidity(&provider, &market_id, &liquidity);
+
+    let swap_amount = 10_000_i128;
+    sa.mint(&trader, &swap_amount);
+    token.approve(&trader, &client.address, &swap_amount, &9999);
+    client.swap_outcome(
+        &trader,
+        &market_id,
+        &symbol_short!("yes"),
+        &symbol_short!("no"),
+        &swap_amount,
+        &0_i128,
+    );
+
+    let position = client.get_lp_position(&provider, &market_id);
+    let expected_fees = position.fees_earned;
+    assert!(expected_fees > 0);
+
+    let balance_before = token.balance(&provider);
+    let collected = client.collect_lp_fees(&provider, &market_id);
+    let balance_after = token.balance(&provider);
+
+    assert_eq!(collected, expected_fees);
+    assert_eq!(balance_after, balance_before + expected_fees);
+}
+
+#[test]
+fn test_collect_lp_fees_resets_fees_to_zero() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (client, _admin, _oracle, xlm_token) = deploy_with_token(&env);
+
+    let creator = Address::generate(&env);
+    let provider = Address::generate(&env);
+    let trader = Address::generate(&env);
+
+    let sa = StellarAssetClient::new(&env, &xlm_token);
+    let token = TokenClient::new(&env, &xlm_token);
+
+    let market_id = client.create_market(&creator, &lp_market_params(&env));
+
+    let liquidity = 100_000_i128;
+    sa.mint(&provider, &liquidity);
+    token.approve(&provider, &client.address, &liquidity, &9999);
+    client.add_liquidity(&provider, &market_id, &liquidity);
+
+    let swap_amount = 10_000_i128;
+    sa.mint(&trader, &swap_amount);
+    token.approve(&trader, &client.address, &swap_amount, &9999);
+    client.swap_outcome(
+        &trader,
+        &market_id,
+        &symbol_short!("yes"),
+        &symbol_short!("no"),
+        &swap_amount,
+        &0_i128,
+    );
+
+    client.collect_lp_fees(&provider, &market_id);
+
+    let position_after = client.get_lp_position(&provider, &market_id);
+    assert_eq!(position_after.fees_earned, 0);
+}
+
+#[test]
+fn test_collect_lp_fees_fails_when_no_fees_earned() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (client, _admin, _oracle, xlm_token) = deploy_with_token(&env);
+
+    let creator = Address::generate(&env);
+    let provider = Address::generate(&env);
+
+    let sa = StellarAssetClient::new(&env, &xlm_token);
+    let token = TokenClient::new(&env, &xlm_token);
+
+    let market_id = client.create_market(&creator, &lp_market_params(&env));
+
+    let liquidity = 100_000_i128;
+    sa.mint(&provider, &liquidity);
+    token.approve(&provider, &client.address, &liquidity, &9999);
+    client.add_liquidity(&provider, &market_id, &liquidity);
+
+    let result = client.try_collect_lp_fees(&provider, &market_id);
+    assert!(matches!(result, Err(Ok(InsightArenaError::InvalidInput))));
+}
