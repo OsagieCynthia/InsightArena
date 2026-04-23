@@ -324,6 +324,11 @@ impl InsightArenaContract {
         governance::list_proposals(&env, start, limit)
     }
 
+    /// Return a single governance proposal by ID.
+    pub fn get_proposal(env: Env, proposal_id: u32) -> Result<Proposal, InsightArenaError> {
+        governance::get_proposal(&env, proposal_id)
+    }
+
     /// Return the total protocol fees accumulated in the treasury.
     pub fn get_treasury_balance(env: Env) -> i128 {
         escrow::get_treasury_balance(&env)
