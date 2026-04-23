@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -26,6 +27,7 @@ import { User } from '../users/entities/user.entity';
 import { BulkCreateMarketsDto } from './dto/bulk-create-markets.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { CreateMarketDto } from './dto/create-market.dto';
+import { UpdateMarketDto } from './dto/update-market.dto';
 import {
   ListMarketsDto,
   PaginatedMarketsResponse,
@@ -43,7 +45,7 @@ import { MarketsService } from './markets.service';
 @ApiTags('Markets')
 @Controller('markets')
 export class MarketsController {
-  constructor(private readonly marketsService: MarketsService) {}
+  constructor(private readonly marketsService: MarketsService) { }
 
   @Get('templates')
   @Public()
@@ -123,6 +125,28 @@ export class MarketsController {
     @CurrentUser() user: User,
   ): Promise<Market[]> {
     return this.marketsService.createBulk(dto.markets, user);
+  }
+
+  @Patch(':id')
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Update market title, description, and/or category',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Market updated',
+    type: Market,
+  })
+  @ApiResponse({ status: 400, description: 'Market has already ended' })
+  @ApiResponse({ status: 403, description: 'Not authorized to update' })
+  @ApiResponse({ status: 404, description: 'Market not found' })
+  async updateMarket(
+    @Param('id') id: string,
+    @Body() dto: UpdateMarketDto,
+    @CurrentUser() user: User,
+  ): Promise<Market> {
+    return this.marketsService.update(id, user.id, dto);
   }
 
   @Get()
